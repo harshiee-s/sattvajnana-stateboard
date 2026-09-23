@@ -194,7 +194,7 @@ select.f-input{padding-right:2.2rem;background-image:linear-gradient(45deg,trans
       <li data-step="2"><span class="dot">2</span><span class="txt">Pay registration fee</span></li>
       <li data-step="3"><span class="dot">3</span><span class="txt">Create your account</span></li>
     </ol>
-    <div class="brand-foot">Already registered? <a href="../index.html">Sign in to the portal</a></div>
+    <div class="brand-foot">Already registered? <a href="../https://lms.sattvajnana.in/">Sign in to the portal</a></div>
   </aside>
 
   <main class="panel">
@@ -275,7 +275,7 @@ select.f-input{padding-right:2.2rem;background-image:linear-gradient(45deg,trans
         <button class="btn" type="submit" id="payBtn"><i class="fa-solid fa-lock"></i>Continue to payment</button>
         <div class="msg" id="detailsMsg" role="alert"></div>
       </form>
-      <div class="mobile-signin">Already registered? <a href="../index.html">Sign in</a></div>
+      <div class="mobile-signin">Already registered? <a href="../https://lms.sattvajnana.in/">Sign in</a></div>
     </section>
 
     <!-- STEP 2: payment states -->
@@ -334,7 +334,7 @@ import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/fir
 const CONFIG = {
   // ↓↓↓ CHANGE THIS to your Netlify payment site address (no slash at the end)
   apiBase: 'https://sattva-payments.netlify.app',
-  lmsUrl: '../index.html',              // the LMS is one folder up from /register/
+  lmsUrl: '../https://lms.sattvajnana.in/',              // the LMS is one folder up from /register/
   storageKey: 'sattva-registration',    // lets a refresh resume mid-flow
   termsUrl: '#',                        // ← put your terms / refund policy URL here
   supportText: 'Contact the school office with the reference below.',
@@ -437,16 +437,12 @@ function renderOptions(opts){
     <span class="chip"><i class="fa-solid fa-book-open"></i>${esc(opts.board)} board</span>`;
   $('termsLink').href = CONFIG.termsUrl;
 
+  // Always show the school list; the student must pick one.
+  // Their subjects in the LMS come from the school they choose.
   const sel = $('fSchool');
-  if(!opts.schools.length){
-    $('schoolGroup').style.display = 'none';
-  } else if(opts.schools.length === 1){
-    sel.innerHTML = `<option value="${esc(opts.schools[0].id)}">${esc(opts.schools[0].name)}</option>`;
-    $('schoolGroup').style.display = 'none';
-  } else {
-    sel.innerHTML = '<option value="">Select your school</option>' +
-      opts.schools.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
-  }
+  $('schoolGroup').style.display = '';
+  sel.innerHTML = '<option value="">Select your school</option>' +
+    opts.schools.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
   // Sensible DOB bounds (roughly 8–25 years old).
   const y = new Date().getFullYear();
   $('fDob').max = `${y - 8}-12-31`;
@@ -475,7 +471,7 @@ function validateDetails(d){
   if(!/^[6-9]\d{9}$/.test(d.phone)) bad.phone = true;
   if(!d.dob) bad.dob = true;
   if(d.city.length < 2) bad.city = true;
-  if((state.options?.schools?.length || 0) > 1 && !d.schoolId) bad.schoolId = true;
+  if(!d.schoolId) bad.schoolId = true;
   if(d.parentName.length < 2) bad.parentName = true;
   if(!/^[6-9]\d{9}$/.test(d.parentPhone)) bad.parentPhone = true;
   document.querySelectorAll('#detailsForm .f-group[data-field]').forEach(g => {
@@ -732,6 +728,11 @@ async function boot(){
     const opts = await call('getRegistrationOptions', {});
     state.options = opts;
     if(!opts.open) return showView('closed');
+    if(!opts.schools.length){
+      $('closedTitle').textContent = 'Registration isn\'t open yet';
+      $('closedText').textContent = 'No schools are set up for registration yet. Please check back soon or contact the school office.';
+      return showView('closed');
+    }
     renderOptions(opts);
     showView('details', 1);
     $('fName').focus();
