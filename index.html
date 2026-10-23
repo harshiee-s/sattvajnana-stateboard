@@ -1234,7 +1234,7 @@ import {
   onAuthStateChanged, signOut, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import {
-  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence,
+  getFirestore, initializeFirestore, runTransaction, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence,
   collection, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
   doc, query, where, onSnapshot, getCountFromServer, getDocs, serverTimestamp, writeBatch, deleteField, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -1407,6 +1407,7 @@ onAuthStateChanged(auth, async (user)=>{
         // per-student section-access overrides (e.g. a "basic" vs "premium" pack).
         let assignedSubjectIds = [];
         let sectionAccessOverrides = {};
+        let registerNumber = '';
         let status = 'Active';
         let photoUrl = '';
         let schoolId = '';
@@ -1416,6 +1417,7 @@ onAuthStateChanged(auth, async (user)=>{
           if(!sSnap.exists()) studentRecordMissing = true;
           if(sSnap.exists()){
             sectionAccessOverrides = sSnap.data().sectionAccessOverrides || {};
+            registerNumber = sSnap.data().registerNumber || '';
             status = sSnap.data().status || 'Active';
             photoUrl = sSnap.data().photoUrl || '';
             schoolId = sSnap.data().schoolId || '';
@@ -1437,7 +1439,7 @@ onAuthStateChanged(auth, async (user)=>{
           return;
         }
         currentUser = user;
-        currentProfile = { ...snap.data(), assignedSubjectIds, sectionAccessOverrides, schoolId, photoUrl: photoUrl || snap.data().photoUrl || '' };
+        currentProfile = { ...snap.data(), assignedSubjectIds, sectionAccessOverrides, schoolId, registerNumber, photoUrl: photoUrl || snap.data().photoUrl || '' };
         enterApp();
         subscribeOwnProfile('students', user.uid);
         claimStudentSession(user);
@@ -1611,7 +1613,8 @@ function subscribeOwnProfile(collectionName, uid){
       ...currentProfile,
       sectionAccessOverrides: data.sectionAccessOverrides || {},
       schoolId: data.schoolId || '',
-      photoUrl: data.photoUrl || ''
+      photoUrl: data.photoUrl || '',
+      registerNumber: data.registerNumber || ''
     };
     subscribeOwnSchoolSubjects(data.schoolId || '');
     applySectionAccess();
@@ -1907,8 +1910,8 @@ function readSectionOverrides(containerEl){
    resource modules (lessons, AI knowledge, study materials, ...).
    ================================================================= */
 const ENTITY_SEARCH_META = {
-  schools:   {icon:'fa-school',             get:r=>r.name,  sub:r=>`School • ${r.address||''}`},
-  students:  {icon:'fa-user-graduate',      get:r=>r.name,  sub:r=>`Student • ${[r.board,r.className].filter(Boolean).join(' ')}`},
+  schools:   {icon:'fa-school',             get:r=>r.name,  sub:r=>`School${r.shortCode?' ('+r.shortCode+')':''} • ${r.address||''}`, extra:r=>r.shortCode},
+  students:  {icon:'fa-user-graduate',      get:r=>r.name,  sub:r=>`Student${r.registerNumber?' • '+r.registerNumber:''} • ${[r.board,r.className].filter(Boolean).join(' ')}`, extra:r=>r.registerNumber},
   subjects:  {icon:'fa-book',               get:r=>r.name,  sub:r=>`Subject • ${[r.board,r.className].filter(Boolean).join(' ')}`},
   chapters:  {icon:'fa-layer-group',        get:r=>r.name,  sub:r=>`Chapter • ${r.subjectName||''}`},
   topics:    {icon:'fa-bookmark',           get:r=>r.name,  sub:r=>`Topic • ${r.chapterName||''}`}
@@ -1923,7 +1926,8 @@ function buildSearchResults(query){
     if(!sectionAllowed(key)) return; // admin hasn't granted this role access to this section
     visibleEntityRows(key).forEach(r=>{
       const label = meta.get(r);
-      if(label && String(label).toLowerCase().includes(q)){
+      const extra = meta.extra ? meta.extra(r) : '';
+      if((label && String(label).toLowerCase().includes(q)) || (extra && String(extra).toLowerCase().includes(q))){
         results.push({ icon:meta.icon, title:String(label), sub:meta.sub(r), action:()=>{ closeMobileSearch(); goToPage(key); } });
       }
     });
@@ -2076,9 +2080,10 @@ const BOARD_OPTIONS = ['State'];
 const ENTITIES = {
   schools: {
     label:'Schools', singular:'School', icon:'fa-school', collection:'schools',
-    columns:[{k:'name',l:'School Name'},{k:'address',l:'Address'},{k:'pocName',l:'POC Name'},{k:'pocPhone',l:'POC Phone'},{k:'assignedSubjectIds',l:'Subjects Visible to Students',relList:'subjects'},{k:'status',l:'Status',pill:true}],
+    columns:[{k:'name',l:'School Name'},{k:'shortCode',l:'Short Code'},{k:'address',l:'Address'},{k:'pocName',l:'POC Name'},{k:'pocPhone',l:'POC Phone'},{k:'assignedSubjectIds',l:'Subjects Visible to Students',relList:'subjects'},{k:'status',l:'Status',pill:true}],
     fields:[
       {k:'name',l:'School Name',type:'text',req:true,ph:'e.g. Sri Hari Sattva Jnana High School'},
+      {k:'shortCode',l:'School Short Code',type:'shortCode',req:true,ph:'e.g. SHJ'},
       {k:'address',l:'Address',type:'text',ph:'e.g. Main Road, City'},
       {k:'pocName',l:'POC Name',type:'text',ph:'e.g. Ramesh Kumar'},
       {k:'pocDesignation',l:'POC Designation',type:'text',ph:'e.g. Principal'},
@@ -2090,9 +2095,10 @@ const ENTITIES = {
   },
   students: {
     label:'Students', singular:'Student', icon:'fa-user-graduate', collection:'students',
-    columns:[{k:'name',l:'Name',avatar:true},{k:'email',l:'Email'},{k:'phone',l:'Contact Number'},{k:'parentName',l:'Parent Name'},{k:'parentPhone',l:'Parent Phone'},{k:'createdAt',l:'Registered On',datetime:true,get:studentRegisteredAt},{k:'lastLogin',l:'Last Login',lastLogin:true},{k:'schoolName',l:'School'},{k:'board',l:'Board'},{k:'className',l:'Class'},{k:'status',l:'Status',pill:true}],
+    columns:[{k:'registerNumber',l:'Register No.'},{k:'name',l:'Name',avatar:true},{k:'email',l:'Email'},{k:'phone',l:'Contact Number'},{k:'parentName',l:'Parent Name'},{k:'parentPhone',l:'Parent Phone'},{k:'createdAt',l:'Registered On',datetime:true,get:studentRegisteredAt},{k:'lastLogin',l:'Last Login',lastLogin:true},{k:'schoolName',l:'School'},{k:'board',l:'Board'},{k:'className',l:'Class'},{k:'status',l:'Status',pill:true}],
     fixedBoardClass:true,
     fields:[
+      {k:'registerNumber',l:'Register Number',type:'readonly',ph:'Assigned automatically when the student is saved'},
       {k:'name',l:'Full Name',type:'text',req:true},
       {k:'email',l:'Email',type:'email',req:true},
       {k:'phone',l:'Contact Number',type:'tel',ph:'e.g. 98765 43210'},
@@ -2383,6 +2389,7 @@ function renderEntityPage(key){
           <label for="studentSchoolFilter">School</label>
           <select class="f-input" id="studentSchoolFilter"><option value="">All schools</option></select>
           <span class="stu-count" id="studentFilterCount"></span>
+          ${readOnly ? '' : `<button class="btn btn-ghost" id="studentRegNoBtn" title="Give register numbers to students who don't have one yet"><i class="fa-solid fa-id-card"></i> Assign Register Numbers</button>`}
           <button class="btn btn-ghost" id="studentExportBtn"><i class="fa-solid fa-file-excel"></i> Export to Excel</button>
         </div>
         ${readOnly ? '' : `<div class="stu-bulkbar" id="studentBulkBar">
@@ -2399,6 +2406,8 @@ function renderEntityPage(key){
     if(key==='students'){
       document.getElementById('studentSchoolFilter').addEventListener('change', (e)=>{ studentSchoolFilter = e.target.value; selectedStudentIds.clear(); renderEntityTable('students'); });
       document.getElementById('studentExportBtn').addEventListener('click', exportStudentsToExcel);
+      const regBtn = document.getElementById('studentRegNoBtn');
+      if(regBtn) regBtn.addEventListener('click', assignMissingRegisterNumbers);
       if(!readOnly){
         document.getElementById('studentBulkResetBtn').addEventListener('click', bulkSendStudentReset);
         document.getElementById('studentBulkDeleteBtn').addEventListener('click', bulkDeleteStudents);
@@ -2646,6 +2655,7 @@ async function exportStudentsToExcel(){
   if(!rows.length){ showToast('There are no students to export for this school.', true); return; }
   const data = rows.map((r,i)=>({
     'S.No': i+1,
+    'Register Number': r.registerNumber || '',
     'Name': r.name || '',
     'Email': r.email || '',
     'Contact Number': r.phone || '',
@@ -2661,7 +2671,7 @@ async function exportStudentsToExcel(){
     'Last Login': lastLoginText(r.id)
   }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:6},{wch:28},{wch:32},{wch:16},{wch:26},{wch:16},{wch:14},{wch:16},{wch:36},{wch:10},{wch:12},{wch:10},{wch:22},{wch:34}];
+  ws['!cols'] = [{wch:6},{wch:16},{wch:28},{wch:32},{wch:16},{wch:26},{wch:16},{wch:14},{wch:16},{wch:36},{wch:10},{wch:12},{wch:10},{wch:22},{wch:34}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Students');
   let label = 'All_Schools';
@@ -2682,6 +2692,7 @@ async function exportSchoolsToExcel(){
   const data = rows.map((r,i)=>({
     'S.No': i+1,
     'School Name': r.name || '',
+    'Short Code': r.shortCode || '',
     'Address': r.address || '',
     'POC Name': r.pocName || '',
     'POC Designation': r.pocDesignation || '',
@@ -2693,7 +2704,7 @@ async function exportSchoolsToExcel(){
     'Created On': tsToDate(r.createdAt) ? tsToDate(r.createdAt).toLocaleDateString('en-IN') : ''
   }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:6},{wch:36},{wch:40},{wch:24},{wch:20},{wch:16},{wch:30},{wch:45},{wch:14},{wch:10},{wch:12}];
+  ws['!cols'] = [{wch:6},{wch:36},{wch:12},{wch:40},{wch:24},{wch:20},{wch:16},{wch:30},{wch:45},{wch:14},{wch:10},{wch:12}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Schools');
   XLSX.writeFile(wb, `Schools_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -3245,6 +3256,7 @@ window.openMyProfileModal = function(){
   const name = currentProfile.name || '';
   document.getElementById('modalTitle').textContent = 'My Profile';
   document.getElementById('modalBody').innerHTML = `
+    ${isStudentRole() ? `<div class="f-group"><label class="f-label">Register Number</label><input class="f-input" style="padding-left:.9rem;" value="${escapeAttr(currentProfile.registerNumber||'Not assigned yet')}" disabled></div>` : ''}
     <div class="f-group"><label class="f-label">Full Name</label><input class="f-input" style="padding-left:.9rem;" id="mpName" value="${escapeAttr(name)}"></div>
     <div class="f-group"><label class="f-label">Email</label><input class="f-input" style="padding-left:.9rem;" value="${escapeAttr(currentProfile.email||'')}" disabled></div>
   `;
@@ -3389,6 +3401,13 @@ function renderField(f, editing, cfgFields){
     return `<div class="f-group"><label class="f-label">${f.l}</label><select class="f-input" style="padding-left:.9rem;" id="fld-${f.k}">
       ${f.opts.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}
     </select></div>`;
+  }
+  if(f.type==='readonly'){
+    return `<div class="f-group"><label class="f-label">${f.l}</label><input class="f-input" style="padding-left:.9rem;" id="fld-${f.k}" value="${escapeHtml(String(val||''))}" placeholder="${escapeAttr(f.ph||'')}" disabled></div>`;
+  }
+  if(f.type==='shortCode'){
+    return `<div class="f-group"><label class="f-label">${f.l}</label><input class="f-input" style="padding-left:.9rem;text-transform:uppercase;" id="fld-${f.k}" maxlength="10" placeholder="${escapeAttr(f.ph||'')}" value="${escapeHtml(String(val||''))}" oninput="this.value=normalizeShortCode(this.value)">
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">2–10 letters or numbers, unique to this school. Students get register numbers like <strong>${escapeHtml(normalizeShortCode(val)||'SHJ')}-001</strong>.</p></div>`;
   }
   if(f.type==='textarea'){
     return `<div class="f-group"><label class="f-label">${f.l}</label><textarea class="f-input" style="padding-left:.9rem;min-height:90px;" id="fld-${f.k}">${escapeHtml(String(val))}</textarea></div>`;
@@ -3884,6 +3903,87 @@ window.closeModal = function(){
   bulkState=null;
 };
 
+/* =================================================================
+   SCHOOL SHORT CODES & STUDENT REGISTER NUMBERS
+   Each school has a unique short code (e.g. SHJ). Every student saved
+   against a school gets the next register number for it: SHJ-001,
+   SHJ-002 … The running count is kept on the school (studentSeq) and
+   updated in a transaction, so two admins adding students at the same
+   moment can never get the same number. Numbers never change once given,
+   even if the student moves school or the school's short code changes.
+   ================================================================= */
+const REGISTER_PAD = 3; // SHJ-001; grows past 999 automatically (SHJ-1000)
+window.normalizeShortCode = function(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10); };
+function shortCodeProblem(code, selfId){
+  if(!code) return 'School Short Code is required.';
+  if(code.length < 2) return 'School Short Code must be at least 2 letters or numbers.';
+  const clash = (entityCache.schools||[]).find(sc=>sc.id!==selfId && normalizeShortCode(sc.shortCode)===code);
+  return clash ? `The short code ${code} is already used by ${clash.name||'another school'}. Please choose a different one.` : '';
+}
+function formatRegisterNumber(code, n){ return `${code}-${String(n).padStart(REGISTER_PAD,'0')}`; }
+// Highest number already given out with this prefix (covers schools that
+// had students before the running count existed).
+function highestRegisterSeq(code){
+  let max = 0;
+  const re = new RegExp('^'+code+'-(\\d+)$');
+  (entityCache.students||[]).forEach(st=>{ const m = String(st.registerNumber||'').match(re); if(m) max = Math.max(max, Number(m[1])); });
+  return max;
+}
+async function nextRegisterNumberTx(tx, schoolId){
+  if(!schoolId) throw new Error('Choose a school first.');
+  const sRef = doc(db,'schools',schoolId);
+  const sSnap = await tx.get(sRef);
+  if(!sSnap.exists()) throw new Error('That school no longer exists.');
+  const code = normalizeShortCode(sSnap.data().shortCode);
+  if(!code) throw new Error(`${sSnap.data().name||'This school'} has no short code yet. Add one in Schools → edit the school, then try again.`);
+  const next = Math.max(Number(sSnap.data().studentSeq||0), highestRegisterSeq(code)) + 1;
+  tx.update(sRef, { studentSeq: next });
+  return { registerNumber: formatRegisterNumber(code, next), registerSeq: next };
+}
+// New student record + its register number, saved together.
+async function createStudentWithRegisterNumber(studentRef, data){
+  return runTransaction(db, async tx=>{
+    const reg = await nextRegisterNumberTx(tx, data.schoolId);
+    tx.set(studentRef, { ...data, ...reg });
+    return reg.registerNumber;
+  });
+}
+// Give an existing student a number (only if they don't have one yet).
+async function assignRegisterNumber(studentId, schoolId){
+  return runTransaction(db, async tx=>{
+    const stRef = doc(db,'students',studentId);
+    const stSnap = await tx.get(stRef);
+    if(!stSnap.exists()) throw new Error('Student not found.');
+    if(stSnap.data().registerNumber) return stSnap.data().registerNumber;
+    const reg = await nextRegisterNumberTx(tx, schoolId || stSnap.data().schoolId);
+    tx.update(stRef, reg);
+    return reg.registerNumber;
+  });
+}
+// One-click backfill for students created before register numbers existed.
+// Oldest students get the lowest numbers.
+async function assignMissingRegisterNumbers(){
+  const schoolsById = new Map((entityCache.schools||[]).map(sc=>[sc.id, sc]));
+  const missing = (entityCache.students||[]).filter(st=>!st.registerNumber)
+    .sort((a,b)=>tsMillis(studentRegisteredAt(a)) - tsMillis(studentRegisteredAt(b)));
+  if(!missing.length){ showToast('Every student already has a register number.'); return; }
+  const ready = missing.filter(st=>{ const sc = schoolsById.get(st.schoolId); return sc && normalizeShortCode(sc.shortCode); });
+  const blocked = missing.length - ready.length;
+  if(!ready.length){ showToast(`${missing.length} student${missing.length===1?'':'s'} without a register number, but their schools have no short code yet. Add short codes in Schools first.`, true); return; }
+  let msg = `Give register numbers to ${ready.length} student${ready.length===1?'':'s'} who don't have one yet?`;
+  if(blocked) msg += `\n\n${blocked} will be skipped because their school has no short code (or they have no school).`;
+  if(!confirm(msg)) return;
+  const btn = document.getElementById('studentRegNoBtn');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Assigning…'; }
+  let done = 0, failed = 0;
+  for(const st of ready){
+    try{ await assignRegisterNumber(st.id, st.schoolId); done++; }
+    catch(e){ console.warn('register number', st.id, e); failed++; }
+  }
+  if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-id-card"></i> Assign Register Numbers'; }
+  showToast(`Assigned ${done} register number${done===1?'':'s'}.${failed?` ${failed} failed — try again.`:''}${blocked?` ${blocked} skipped (school has no short code).`:''}`, failed>0 && !done);
+}
+
 async function saveEntity(key, editId){
   const cfg = ENTITIES[key];
   const data = {};
@@ -3897,20 +3997,44 @@ async function saveEntity(key, editId){
       data[f.k] = readSectionOverrides(document.getElementById('fld-'+f.k));
       continue;
     }
+    if(f.type==='readonly') continue; // set by the portal, never typed in
     const el = document.getElementById('fld-'+f.k);
     let v = el.value;
     if(f.type==='number') v = Number(v||0);
+    if(f.type==='shortCode') v = normalizeShortCode(v);
     if(f.req && (v===''||v===undefined)){ showToast(`${f.l} is required.`, true); return; }
     data[f.k] = v;
   }
   if(cfg.fixedBoardClass){ data.board = BOARD_OPTIONS[0]; data.className = CLASS_OPTIONS[0]; }
+  if(key==='schools'){
+    const problem = shortCodeProblem(data.shortCode, editId);
+    if(problem){ showToast(problem, true); return; }
+    const before = editId ? (entityCache.schools||[]).find(x=>x.id===editId) : null;
+    if(before && before.shortCode && before.shortCode!==data.shortCode && (entityCache.students||[]).some(st=>st.schoolId===editId && st.registerNumber)){
+      if(!confirm(`Change the short code from ${before.shortCode} to ${data.shortCode}?\n\nStudents who already have a register number keep it (e.g. ${before.shortCode}-001). Only new students will get ${data.shortCode}-… numbers.`)) return;
+    }
+  }
   const btn = document.getElementById('modalSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving...';
   try{
     let savedId = editId;
-    if(editId){
+    if(key==='students' && !editId){
+      data.createdAt = new Date().toISOString();
+      const ref = doc(collection(db, cfg.collection));
+      const reg = await createStudentWithRegisterNumber(ref, data);
+      savedId = ref.id;
+      showToast(`Student added. Register number: ${reg}`);
+    }else if(editId){
       await updateDoc(doc(db, cfg.collection, editId), data);
-      showToast(`${cfg.singular} updated.`);
+      let msg = `${cfg.singular} updated.`;
+      if(key==='students'){
+        const st = (entityCache.students||[]).find(x=>x.id===editId);
+        if(st && !st.registerNumber && data.schoolId){
+          try{ msg += ` Register number: ${await assignRegisterNumber(editId, data.schoolId)}`; }
+          catch(e){ msg += ` (No register number yet: ${e.message})`; }
+        }
+      }
+      showToast(msg);
     }else{
       data.createdAt = new Date().toISOString();
       savedId = (await addDoc(collection(db, cfg.collection), data)).id;
@@ -5149,7 +5273,7 @@ function renderCuSchoolOptions(){
   const prevVal = sel.value;
   const schools = (entityCache.schools||[]).filter(s=>s.status!=='Inactive');
   sel.innerHTML = schools.length
-    ? schools.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')
+    ? schools.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}${s.shortCode?` (${escapeHtml(s.shortCode)})`:' — no short code yet'}</option>`).join('')
     : `<option value="">— Add a School first —</option>`;
   if(schools.some(s=>s.id===prevVal)) sel.value = prevVal;
 }
@@ -5192,6 +5316,14 @@ document.getElementById('createUserForm').addEventListener('submit', async e=>{
     // A separate, temporary Firebase app creates the login, so the admin
     // stays signed in. It's always cleaned up, even if creation fails
     // (e.g. the email is already registered).
+    let createdRegNo = '';
+    if(role!=='admin'){
+      const sc = (entityCache.schools||[]).find(x=>x.id===document.getElementById('cuSchool').value);
+      if(sc && !normalizeShortCode(sc.shortCode)){
+        showToast(`${sc.name||'This school'} has no short code yet, so a register number can't be given. Add one in Schools → edit the school, then try again.`, true);
+        return; // finally{} below re-enables the button
+      }
+    }
     const secondaryApp = initializeApp(firebaseConfig, 'Secondary'+Date.now());
     let uid;
     try{
@@ -5209,9 +5341,18 @@ document.getElementById('createUserForm').addEventListener('submit', async e=>{
     } else {
       const sectionAccessOverrides = readSectionOverrides(document.getElementById('cuSectionOverrides'));
       const schoolId = document.getElementById('cuSchool').value;
-      await setDoc(doc(db,'students',uid), { name, email, phone, schoolId, board: BOARD_OPTIONS[0], className: CLASS_OPTIONS[0], sectionAccessOverrides, status:'Active', createdAt:new Date().toISOString() });
+      const studentData = { name, email, phone, schoolId, board: BOARD_OPTIONS[0], className: CLASS_OPTIONS[0], sectionAccessOverrides, status:'Active', createdAt:new Date().toISOString() };
+      try{
+        createdRegNo = await createStudentWithRegisterNumber(doc(db,'students',uid), studentData);
+      }catch(regErr){
+        // Never lose the account over the number — save the student, and the
+        // number can be added later with "Assign Register Numbers".
+        console.warn('register number', regErr);
+        await setDoc(doc(db,'students',uid), studentData);
+        showToast(`Student saved, but no register number yet: ${regErr.message}`, true);
+      }
     }
-    showToast(`${role.charAt(0).toUpperCase()+role.slice(1)} account created for ${name}.`);
+    showToast(`${role.charAt(0).toUpperCase()+role.slice(1)} account created for ${name}.${createdRegNo?` Register number: ${createdRegNo}`:''}`);
     e.target.reset();
     document.getElementById('cuSchoolWrap').style.display = 'block';
     document.getElementById('cuPhoneWrap').style.display = 'block';
