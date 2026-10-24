@@ -884,6 +884,47 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
   .stat-card-hero .stat-num{font-size:3rem;}
 }
 
+
+/* ===== Compact phone layout =====
+   On phones the portal shows at true size, so desktop-sized text, cards and
+   buttons looked oversized. Everything sized in rem shrinks with the root
+   font size; the rest is tightened below. */
+@media(max-width:900px){
+  html{font-size:15px;}
+  .topbar{min-height:58px;}
+  .tb-greet h1{font-size:1rem;}
+  .tb-avatar,.theme-toggle,.tb-search-toggle{width:34px;height:34px;font-size:.8rem;}
+  .page-head{align-items:flex-start;gap:.6rem;margin-bottom:.9rem;}
+  .page-head h2{font-size:1.15rem;}
+  .page-head p{font-size:.78rem;}
+  .page-head > .btn,.page-head .btn{width:auto;justify-content:center;}
+  .btn{padding:.55rem .9rem;font-size:.8rem;}
+  .stu-toolbar{gap:.5rem;}
+  .stu-toolbar .btn{width:auto;flex:1 1 auto;}
+  .panel,.table-panel{padding:.9rem;}
+  .ai-breadcrumb{font-size:.78rem;margin-bottom:.7rem;}
+  .cat-card{padding:.85rem;border-radius:16px;}
+  .cat-card .cc-icon{width:34px;height:34px;font-size:.85rem;margin-bottom:.55rem;}
+  .cat-card .cc-title{font-size:.84rem;}
+  .file-card{padding:.75rem .85rem;}
+  /* Dashboard: compact number cards, two side by side */
+  #statGrid{min-height:0 !important;justify-content:flex-start !important;align-items:stretch !important;gap:.7rem !important;}
+  .stat-card-hero{flex:1 1 calc(50% - .35rem);min-width:0;padding:1rem;text-align:left;}
+  .stat-card-hero .stat-icon{width:42px;height:42px;border-radius:12px;font-size:1.05rem;margin:0 0 .7rem;}
+  .stat-card-hero .stat-num{font-size:1.9rem;}
+  .stat-card-hero .stat-label{font-size:.8rem;margin-top:.3rem;}
+  .modal-head h3{font-size:.95rem;}
+}
+@media(max-width:480px){
+  html{font-size:14px;}
+}
+
+@media(max-width:900px){
+  .tb-greet h1{display:flex;flex-direction:column;line-height:1.2;white-space:normal;}
+  .tb-greet h1 .tg-hello{font-size:.72rem;font-weight:600;color:var(--text-2);}
+  .tb-greet h1 .tg-hello,.tb-greet h1 .tg-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tb-greet h1 .tg-name{font-size:1rem;}
+}
 </style>
 </head>
 <body>
@@ -993,7 +1034,7 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
     <div class="tb-left">
       <button class="hamburger icon-btn" aria-label="Open menu" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fa-solid fa-bars"></i></button>
       <div class="tb-greet">
-        <h1 id="greetTitle">Good Morning, Admin! 👋</h1>
+        <h1 id="greetTitle"><span class="tg-hello">Good Morning,</span> <span class="tg-name">Admin! 👋</span></h1>
         <p>Welcome back to Sri Hari Sattva Jnana AI Learning</p>
       </div>
     </div>
@@ -1273,6 +1314,18 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
     <div class="modal-foot">
       <span id="notifProgress" style="margin-right:auto;font-size:.76rem;color:var(--text-3);align-self:center;"></span>
       <button class="btn btn-primary" id="notifDismissBtn"><i class="fa-solid fa-check"></i> Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- "Exit the app?" — shown when Back is pressed on the home screen -->
+<div class="modal-overlay" id="exitOverlay" role="dialog" aria-modal="true" aria-labelledby="exitTitle">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-head"><h3 id="exitTitle" style="display:flex;align-items:center;gap:.5rem;"><i class="fa-solid fa-right-from-bracket" style="color:var(--purple);"></i> Exit the app?</h3></div>
+    <div class="modal-body"><p style="font-size:.88rem;color:var(--text-2);">Are you sure you want to exit the app?</p></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" type="button" id="exitLeaveBtn"><i class="fa-solid fa-right-from-bracket"></i> Exit</button>
+      <button class="btn btn-primary" type="button" id="exitStayBtn">Stay</button>
     </div>
   </div>
 </div>
@@ -1826,6 +1879,15 @@ function renderTopbarAvatar(){
     ? `<img src="${escapeAttr(currentProfile.photoUrl)}" alt="">`
     : escapeHtml(name.trim().charAt(0).toUpperCase() || '?');
 }
+// "Good Afternoon, Harshith! 👋" — one line on desktop, two lines on phones.
+function setGreeting(name){
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
+  const shown = isSchoolRole() ? (name||'') : String(name||'').split(' ')[0];
+  const el = document.getElementById('greetTitle');
+  el.innerHTML = `<span class="tg-hello">${escapeHtml(greet)},</span> <span class="tg-name">${escapeHtml(shown)}! 👋</span>`;
+  el.title = `${greet}, ${shown}!`;
+}
 function enterApp(){
   hideLoadingScreen();
   document.getElementById('loginScreen').classList.remove('show');
@@ -1833,9 +1895,7 @@ function enterApp(){
   const name = currentProfile.name || 'Admin';
   document.getElementById('tbName').textContent = name;
   renderTopbarAvatar();
-  const hr = new Date().getHours();
-  const greet = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
-  document.getElementById('greetTitle').textContent = `${greet}, ${isSchoolRole() ? name : name.split(' ')[0]}! 👋`;
+  setGreeting(name);
   document.getElementById('setName').value = name;
   document.getElementById('setEmail').value = currentProfile.email || '';
   subscribeSectionAccess();
@@ -2284,7 +2344,7 @@ function portalAtRoot(){
 }
 function ensureBackGuard(){
   try{
-    if(portalAtRoot()) return;
+    if(exitingApp || !currentUser || !document.getElementById('app').classList.contains('show')) return;
     if(history.state && history.state.sattvaGuard) return;
     history.pushState({ sattvaGuard:true }, '');
   }catch(e){}
@@ -2325,10 +2385,44 @@ function goUpOneLevel(){
   if(key !== home){ goToPage(home); return true; }
   return false;
 }
+// ---- "Are you sure you want to exit the app?" ----
+let exitingApp = false;
+function exitDialogOpen(){ return document.getElementById('exitOverlay').classList.contains('show'); }
+function showExitConfirm(){
+  document.getElementById('exitOverlay').classList.add('show');
+  ensureBackGuard(); // pressing Back again while asking just closes the question
+  setTimeout(()=>document.getElementById('exitStayBtn').focus(), 30);
+}
+function hideExitConfirm(){ document.getElementById('exitOverlay').classList.remove('show'); }
+document.getElementById('exitStayBtn').addEventListener('click', ()=>{ hideExitConfirm(); ensureBackGuard(); });
+document.getElementById('exitLeaveBtn').addEventListener('click', ()=>{
+  hideExitConfirm();
+  exitingApp = true;
+  const before = location.href;
+  history.go(-2); // step past the guard and the portal itself
+  setTimeout(()=>{
+    // Still here: the portal was the first page in this tab/app, so there's
+    // nowhere to go back to. Try closing it; otherwise one more Back closes it.
+    if(location.href !== before) return;
+    try{ window.close(); }catch(e){}
+    setTimeout(()=>{
+      if(document.visibilityState === 'hidden') return;
+      // Remove our extra history entry so the phone's next Back closes the app
+      // directly (exitingApp stays on, so it isn't asked again).
+      try{ if(history.state && history.state.sattvaGuard) history.back(); }catch(e){}
+      showToast('Press back once more to close the app.');
+      // If they keep using the portal instead, go back to asking next time.
+      setTimeout(()=>{ if(document.visibilityState !== 'hidden'){ exitingApp = false; ensureBackGuard(); } }, 4000);
+    }, 300);
+  }, 400);
+});
+document.getElementById('exitOverlay').addEventListener('click', (e)=>{ if(e.target.id==='exitOverlay'){ hideExitConfirm(); ensureBackGuard(); } });
+
 window.addEventListener('popstate', ()=>{
-  if(!currentUser) return;
+  if(!currentUser || exitingApp) return;
+  if(exitDialogOpen()){ hideExitConfirm(); ensureBackGuard(); return; } // Back while asking = Stay
   if(goUpOneLevel()) ensureBackGuard();
-  else history.back(); // already at the top — leave the portal
+  else showExitConfirm(); // at the top — ask before leaving
 });
 // Popups, the mobile menu and mobile search also count as a level.
 ['modalOverlay','sidebar','tbSearchWrap'].forEach(id=>{
@@ -3715,7 +3809,7 @@ window.openMyProfileModal = function(){
       if(isStudentRole()) await updateDoc(doc(db,'students',currentUser.uid), { name:newName });
       currentProfile = { ...currentProfile, name:newName };
       document.getElementById('tbName').textContent = newName;
-      document.getElementById('greetTitle').textContent = document.getElementById('greetTitle').textContent.replace(/,.*?!/, `, ${newName.split(' ')[0]}!`);
+      setGreeting(newName);
       renderTopbarAvatar();
       if(document.getElementById('setName')) document.getElementById('setName').value = newName;
       showToast('Profile updated.');
