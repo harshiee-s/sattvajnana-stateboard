@@ -3,9 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://apis.google.com https://www.google.com https://www.recaptcha.net; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' data: https: blob:; media-src 'self' https: data: blob:; frame-src 'self' https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <!-- GitHub Pages can't send security headers, so these two are set here instead. -->
 <meta name="referrer" content="strict-origin-when-cross-origin" />
+<script>
+/* No zooming on phones and tablets. */
+(function(){
+  var block = function(e){ e.preventDefault(); };
+  document.addEventListener('gesturestart', block, { passive:false });   // iPhone / iPad pinch
+  document.addEventListener('gesturechange', block, { passive:false });
+  document.addEventListener('gestureend', block, { passive:false });
+  document.addEventListener('touchmove', function(e){ if(e.touches && e.touches.length > 1) e.preventDefault(); }, { passive:false }); // two-finger pinch
+  var lastTap = 0;
+  document.addEventListener('touchend', function(e){                    // double-tap zoom
+    var now = Date.now();
+    var tappable = e.target.closest && e.target.closest('button,a,input,textarea,select,label,[onclick],[role="button"],[data-cat],[data-page],.bn-item,.cat-card,.file-card,.mp-row,.pg-dot,summary,[contenteditable]');
+    if(now - lastTap < 300 && !tappable) e.preventDefault(); // repeated taps on buttons still count
+    lastTap = now;
+  }, { passive:false });
+})();
+</script>
 <!-- Anti-clickjacking: the page stays hidden if another site tries to show it
      inside a frame, and breaks out to open normally instead. -->
 <style id="antiClickjack">html{display:none !important;}</style>
@@ -129,7 +146,8 @@
 .sb-item:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
-html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-x pan-y;}
+body{touch-action:pan-x pan-y;}
 body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;}
 .sidebar,.main,.table-panel,.modal-box,.ms-box,.search-dropdown{-webkit-overflow-scrolling:touch;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;position:relative;}
@@ -225,7 +243,7 @@ img{display:block;max-width:100%;}
 
 /* ===== APP SHELL — floating spatial dock: sidebar & topbar are glass panels
    hovering above the aurora, separated by real gaps so depth reads clearly ===== */
-#app{display:none;height:100vh;grid-template-columns:266px 1fr;grid-template-rows:80px 1fr;gap:.85rem;padding:.85rem;background:transparent;}
+#app{display:none;height:100vh;height:100dvh;grid-template-columns:266px minmax(0,1fr);grid-template-rows:80px 1fr;gap:.85rem;padding:.85rem;background:transparent;}
 #app.show{display:grid;}
 
 .sidebar{grid-row:1/-1;position:relative;padding:1.4rem 1rem 1rem;display:flex;flex-direction:column;overflow-y:auto;
@@ -256,7 +274,7 @@ img{display:block;max-width:100%;}
   background:rgba(255,255,255,.5);backdrop-filter:blur(8px);box-shadow:inset 0 1px 3px rgba(16,24,40,.08);}
 .ms-opt{display:flex;align-items:center;gap:.55rem;padding:.4rem .1rem;font-size:.83rem;cursor:pointer;}
 .ms-opt input{width:15px;height:15px;accent-color:var(--purple);cursor:pointer;flex-shrink:0;}
-.subject-chip{display:inline-flex;align-items:center;padding:.2rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;background:var(--purple-bg);color:var(--purple);margin:1px 3px 1px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5);}
+.subject-chip{display:inline-flex;align-items:center;white-space:nowrap;padding:.2rem .55rem;border-radius:99px;font-size:.68rem;font-weight:700;background:var(--purple-bg);color:var(--purple);margin:1px 3px 1px 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.5);}
 
 .topbar{grid-column:2;position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0 1.7rem;gap:.8rem;
   border-radius:var(--radius-lg);
@@ -425,7 +443,7 @@ tbody tr:hover{background:rgba(108,92,231,.05);}
 .sel-col input{width:16px;height:16px;accent-color:var(--purple);cursor:pointer;vertical-align:middle;}
 tr.row-selected td{background:rgba(108,92,231,.07);}
 .stu-toolbar .stu-count{font-size:.78rem;color:var(--text-3);margin-right:auto;}
-.table-panel{position:relative;overflow-x:auto;background:var(--surface);border:1px solid var(--glass-edge);border-radius:var(--radius);padding:1.2rem;
+.table-panel{position:relative;overflow:visible;background:var(--surface);border:1px solid var(--glass-edge);border-radius:var(--radius);padding:1.2rem;
   backdrop-filter:var(--blur-s);-webkit-backdrop-filter:var(--blur-s);box-shadow:var(--shadow);}
 /* Lesson video: crops Google Drive's own top toolbar (filename, pop-out, more-menu)
    so students just see the player, not that it's hosted on Drive. Only applied
@@ -773,10 +791,44 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
 @keyframes toastin{from{opacity:0;transform:translateY(14px) scale(.97);}to{opacity:1;transform:none;}}
 
 .hamburger{display:none;}
+/* ===== Phones: big content panels without the frosted blur =====
+   Chrome/Edge can stop drawing a large blurred panel partway down, which
+   cut tables off. Panels get a solid surface on phones instead. */
+@media(max-width:900px){
+  .table-panel,.panel,.stat-card,.cat-card,.file-card,.pg-card,.pg-subject,.mp-stat,.mp-panel,.nb-card,.chapter-done-bar,.ms-box{
+    backdrop-filter:none !important;-webkit-backdrop-filter:none !important;background:var(--surface-strong);}
+  .table-panel table th,.table-panel table td{white-space:normal;}
+}
+/* ===== Mobile bottom tab bar ===== */
+.bottom-nav{display:none;}
+@media(max-width:900px){
+  .bottom-nav{display:flex;position:fixed;left:.6rem;right:.6rem;bottom:calc(.6rem + env(safe-area-inset-bottom));z-index:350;
+    align-items:stretch;justify-content:space-around;gap:.2rem;padding:.4rem .35rem;border-radius:22px;
+    background:var(--surface-strong);backdrop-filter:var(--blur-m);-webkit-backdrop-filter:var(--blur-m);
+    border:1px solid var(--glass-edge);box-shadow:var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,.6);}
+  .bn-item{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;
+    padding:.45rem .2rem;border-radius:16px;color:var(--text-2);font-size:.66rem;font-weight:600;line-height:1.1;transition:var(--t);}
+  .bn-item i{font-size:1.1rem;}
+  .bn-item span.bn-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bn-item.active{color:var(--purple);background:var(--purple-bg);}
+  .bn-item.active::after{content:'';position:absolute;bottom:3px;width:16px;height:3px;border-radius:99px;background:var(--purple);}
+  .bn-item:active{transform:scale(.95);}
+  .bn-item:focus-visible{outline:2px solid var(--purple);outline-offset:2px;}
+  .bn-badge{position:absolute;top:3px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--gold);
+    color:#1a1300;font-size:.6rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;}
+  .bn-badge[hidden]{display:none;}
+  [data-theme="dark"] .bottom-nav{box-shadow:var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,.08);}
+  /* room for the bar, and keep toasts above it */
+  .main{padding-bottom:calc(6.5rem + env(safe-area-inset-bottom)) !important;}
+  #toastWrap{bottom:calc(5.6rem + env(safe-area-inset-bottom));right:.8rem;left:.8rem;align-items:center;}
+  /* the bar's "More" tab replaces the top-left menu button */
+  .topbar .hamburger{display:none !important;}
+}
 .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(5,7,14,.5);backdrop-filter:blur(3px);z-index:390;}
 
 @media(max-width:900px){
-  #app.show{grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:.6rem;padding:.6rem;}
+  #app.show{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:.6rem;padding:.6rem;}
+  .topbar,.main{min-width:0;}
   .sidebar{position:fixed;left:.6rem;top:.6rem;bottom:.6rem;width:266px;max-width:82vw;z-index:400;transform:translateX(calc(-100% - 1rem));transition:transform .3s cubic-bezier(.22,1,.36,1);border-radius:var(--radius-lg);}
   .sidebar.open{transform:translateX(0);}
   #app:has(.sidebar.open) .sidebar-backdrop{display:block;}
@@ -903,13 +955,13 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
       </div>
     </div>
     <nav class="sb-nav" id="sbNav">
-      <div class="sb-item active" data-page="dashboard" data-admin-only><i class="fa-solid fa-grip"></i> Dashboard</div>
+      <div class="sb-item active" data-page="dashboard" data-admin-only data-school-ok><i class="fa-solid fa-grip"></i> Dashboard</div>
       <div class="sb-item" data-page="myProgress" data-student-only style="display:none;"><i class="fa-solid fa-chart-line"></i> My Progress</div>
       <div class="sb-item" data-page="noticeBoard" data-student-only style="display:none;"><i class="fa-solid fa-bullhorn"></i> Notice Board <span class="nb-badge" id="nbBadge" hidden></span></div>
 
-      <div class="sb-group-label" data-admin-only>User Management</div>
+      <div class="sb-group-label" data-admin-only data-school-ok>User Management</div>
       <div class="sb-item" data-page="schools" data-admin-only><i class="fa-solid fa-school"></i> Schools</div>
-      <div class="sb-item" data-page="students" data-admin-only><i class="fa-solid fa-user-graduate"></i> Students</div>
+      <div class="sb-item" data-page="students" data-admin-only data-school-ok><i class="fa-solid fa-user-graduate"></i> Students</div>
       <div class="sb-item" data-page="createUser" data-admin-only><i class="fa-solid fa-user-plus"></i> Create User</div>
       <div class="sb-item" data-page="notifications" data-admin-only><i class="fa-solid fa-bell"></i> Notifications</div>
       <div class="sb-item" data-page="studentProgress" data-admin-only><i class="fa-solid fa-chart-line"></i> Student Progress</div>
@@ -1184,11 +1236,11 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
           <h3>Section Access</h3>
         </div>
         <p style="font-size:.78rem;color:var(--text-2);margin:-.3rem 0 .9rem;">
-          Choose which sections Students can see in their portal. A section stays hidden from Students until you check it here — subjects a student isn't assigned to still stay out of reach either way.
+          Choose which sections Students and School logins can see. Untick a box to hide that section for everyone with that kind of login. Both only ever see the subjects assigned to their school.
         </p>
         <div style="overflow-x:auto;">
           <table id="sectionAccessTable">
-            <thead><tr><th>Section</th><th style="text-align:center;">Student</th></tr></thead>
+            <thead><tr><th>Section</th><th style="text-align:center;">Student</th><th style="text-align:center;">School</th></tr></thead>
             <tbody id="sectionAccessBody"></tbody>
           </table>
         </div>
@@ -1197,6 +1249,7 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
     </section>
 
   </main>
+  <nav class="bottom-nav" id="bottomNav" aria-label="Main sections"></nav>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
@@ -1411,6 +1464,7 @@ onAuthStateChanged(auth, async (user)=>{
         let status = 'Active';
         let photoUrl = '';
         let schoolId = '';
+        let schoolInactive = false;
         let studentRecordMissing = false;
         try{
           const sSnap = await getDoc(doc(db,'students',user.uid));
@@ -1424,7 +1478,10 @@ onAuthStateChanged(auth, async (user)=>{
           }
           if(schoolId){
             const schoolSnap = await getDoc(doc(db,'schools',schoolId));
-            if(schoolSnap.exists()) assignedSubjectIds = schoolSnap.data().assignedSubjectIds || [];
+            if(schoolSnap.exists()){
+              assignedSubjectIds = schoolSnap.data().assignedSubjectIds || [];
+              schoolInactive = schoolSnap.data().status === 'Inactive';
+            }
           }
         }catch(e){ console.warn('Could not load student profile', e); }
         if(studentRecordMissing){
@@ -1438,11 +1495,49 @@ onAuthStateChanged(auth, async (user)=>{
           await signOut(auth);
           return;
         }
+        if(schoolInactive){
+          authMsg('Access for your school has been paused. Contact your admin.', true);
+          await signOut(auth);
+          return;
+        }
         currentUser = user;
         currentProfile = { ...snap.data(), assignedSubjectIds, sectionAccessOverrides, schoolId, registerNumber, photoUrl: photoUrl || snap.data().photoUrl || '' };
         enterApp();
         subscribeOwnProfile('students', user.uid);
         claimStudentSession(user);
+        return;
+      }
+      if(snap.exists() && snap.data().role === 'school'){
+        // A School login: view-only access to one school's students and subjects.
+        const prof = snap.data();
+        let school = null;
+        try{
+          if(prof.schoolId){
+            const sSnap = await getDoc(doc(db,'schools',prof.schoolId));
+            if(sSnap.exists()) school = { id:sSnap.id, ...sSnap.data() };
+          }
+        }catch(e){ console.warn('Could not load school', e); }
+        if(String(prof.status||'active').toLowerCase() === 'inactive'){
+          authMsg('This school login has been disabled. Contact your admin.', true);
+          await signOut(auth);
+          return;
+        }
+        if(!school){
+          authMsg('This school login isn\'t linked to a school any more. Contact your admin.', true);
+          await signOut(auth);
+          return;
+        }
+        if(school.status === 'Inactive'){
+          authMsg('Access for your school has been paused. Contact your admin.', true);
+          await signOut(auth);
+          return;
+        }
+        currentUser = user;
+        currentProfile = { ...prof, schoolId: school.id, assignedSubjectIds: school.assignedSubjectIds || [], loginSectionAccessOverrides: school.loginSectionAccessOverrides || {} };
+        entityCache.schools = [school];
+        enterApp();
+        subscribeOwnSchoolSubjects(school.id);
+        subscribeSchoolLogin(user.uid);
         return;
       }
       if(snap.exists()){
@@ -1639,10 +1734,67 @@ function subscribeOwnSchoolSubjects(schoolId){
   }
   unsubOwnSchool = onSnapshot(doc(db,'schools',schoolId), (snap)=>{
     if(!currentProfile) return;
+    if(isSchoolRole() && !snap.exists()){
+      authMsg('This school has been removed. Contact your admin.', true);
+      signOut(auth);
+      return;
+    }
+    if(isSchoolRole()){
+      entityCache.schools = [{ id:snap.id, ...snap.data() }];
+      currentProfile = { ...currentProfile, loginSectionAccessOverrides: snap.data().loginSectionAccessOverrides || {} }; // pack changes apply live
+    }
+    if(snap.exists() && snap.data().status === 'Inactive'){
+      // Admin made this student's school Inactive while they were signed in.
+      authMsg('Access for your school has been paused. Contact your admin.', true);
+      signOut(auth);
+      return;
+    }
     currentProfile = { ...currentProfile, assignedSubjectIds: (snap.exists() ? snap.data().assignedSubjectIds : []) || [] };
     applySectionAccess();
     rehydrateAll();
   }, (err)=>console.warn('Could not subscribe to school subjects', err));
+}
+
+// Signs a School login out straight away if the admin disables or removes it.
+function subscribeSchoolLogin(uid){
+  if(unsubOwnProfile){ unsubOwnProfile(); unsubOwnProfile = null; }
+  unsubOwnProfile = onSnapshot(doc(db,'users',uid), (snap)=>{
+    if(!currentProfile || !isSchoolRole()) return;
+    if(!snap.exists()){
+      authMsg('This school login has been removed. Contact your admin.', true);
+      signOut(auth);
+      return;
+    }
+    const d = snap.data();
+    if(String(d.status||'active').toLowerCase() === 'inactive'){
+      authMsg('This school login has been disabled. Contact your admin.', true);
+      signOut(auth);
+      return;
+    }
+    if(d.name && d.name !== currentProfile.name){
+      currentProfile = { ...currentProfile, name:d.name };
+      document.getElementById('tbName').textContent = d.name;
+      renderTopbarAvatar();
+    }
+  }, (err)=>console.warn('Could not watch school login', err));
+}
+// A School login downloads only its own school's students, and only while
+// the admin allows the Students page for School logins.
+function syncSchoolStudentsListener(){
+  if(!isSchoolRole() || !currentProfile) return;
+  const want = sectionAllowed('students') && !!currentProfile.schoolId;
+  if(!want){
+    if(entityUnsubs.students){ try{ entityUnsubs.students(); }catch(e){} delete entityUnsubs.students; }
+    entityCache.students = [];
+    return;
+  }
+  if(entityUnsubs.students) return;
+  entityUnsubs.students = onSnapshot(query(collection(db,'students'), where('schoolId','==',currentProfile.schoolId)), (snap)=>{
+    const rows = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    rows.sort((a,b)=> tsMillis(studentRegisteredAt(b)) - tsMillis(studentRegisteredAt(a)));
+    entityCache.students = rows;
+    rehydrateAll();
+  }, (err)=>{ console.warn('students', err); if(!entityCache.students) entityCache.students = []; rehydrateAll(); });
 }
 
 function hideLoadingScreen(){
@@ -1683,7 +1835,7 @@ function enterApp(){
   renderTopbarAvatar();
   const hr = new Date().getHours();
   const greet = hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
-  document.getElementById('greetTitle').textContent = `${greet}, ${name.split(' ')[0]}! 👋`;
+  document.getElementById('greetTitle').textContent = `${greet}, ${isSchoolRole() ? name : name.split(' ')[0]}! 👋`;
   document.getElementById('setName').value = name;
   document.getElementById('setEmail').value = currentProfile.email || '';
   subscribeSectionAccess();
@@ -1692,7 +1844,7 @@ function enterApp(){
   initDashboard();
   ENTITY_KEYS.forEach(k=>renderEntityPage(k));
   Object.values(RESOURCE_MODULES).forEach(initResourceModule);
-  goToPage(isRestrictedRole() ? studentHomePage() : 'dashboard');
+  goToPage(isRestrictedRole() ? restrictedHomePage() : 'dashboard');
   subscribeLastLogins();
   if(!isRestrictedRole()) renderNotificationsPage();
   subscribeNotifications();
@@ -1706,25 +1858,43 @@ function enterApp(){
        assigned to their account.
 */
 function isReadOnlyForEntity(key){
-  return isStudentRole();
+  return isRestrictedRole();
 }
 function isReadOnlyForModule(key){
-  return isStudentRole();
+  return isRestrictedRole();
 }
 
 function isStudentRole(){ return !!(currentProfile && currentProfile.role === 'student'); }
-function isRestrictedRole(){ return isStudentRole(); } // any non-admin login
+// A School login belongs to one school: view-only, scoped to that school's
+// students and subjects, and only the sections the admin allows.
+function isSchoolRole(){ return !!(currentProfile && currentProfile.role === 'school'); }
+function isRestrictedRole(){ return isStudentRole() || isSchoolRole(); } // any non-admin login
 function assignedSubjectSet(){ return new Set((currentProfile && currentProfile.assignedSubjectIds) || []); }
 function visibleStudentRows(){
   return entityCache.students || [];
 }
+// A subject marked Inactive (or one under an Inactive Main Subject) is hidden
+// from students even if their school has it.
+function subjectActive(subjectId){
+  const s = subjectById(subjectId);
+  if(!s) return true; // subjects not loaded yet — decided again once they arrive
+  if(s.status === 'Inactive') return false;
+  const parent = subjectParent(s);
+  return !(parent && parent.status === 'Inactive');
+}
 function subjectAllowed(subjectId){
   if(!isRestrictedRole()) return true;
-  return !!subjectId && assignedSubjectSet().has(subjectId);
+  return !!subjectId && assignedSubjectSet().has(subjectId) && subjectActive(subjectId);
+}
+// Students don't download the Chapters list, so the admin's browser publishes
+// the ids of Inactive chapters inside catalog/progressIndex.
+function inactiveChapterMap(){ return (progressIndex && progressIndex.inactiveChapters) || {}; }
+function chapterActiveForStudent(chapterId){
+  return !chapterId || !Object.prototype.hasOwnProperty.call(inactiveChapterMap(), chapterId);
 }
 // Resource modules (lessons/aiKnowledge/studyMaterials/questionBank/questionPaper) tag every row with subjectId directly.
 function visibleRows(cfg){
-  let rows = isRestrictedRole() ? cfg.rows.filter(r=>subjectAllowed(r.subjectId)) : cfg.rows;
+  let rows = isRestrictedRole() ? cfg.rows.filter(r=>subjectAllowed(r.subjectId) && chapterActiveForStudent(r.chapterId)) : cfg.rows;
   // For modules with a visibility toggle (Mock-Question Paper), students only
   // ever see papers the admin has marked as Shown; admins keep seeing them all.
   if(cfg.visibilityToggle && isRestrictedRole()) rows = rows.filter(r=>!r.hidden);
@@ -1755,13 +1925,16 @@ function visibleEntityRows(key){
 }
 function applyRolePermissions(){
   const student = isStudentRole();
-  const restricted = student;
+  const school = isSchoolRole();
+  const restricted = student || school;
   document.body.classList.toggle('role-student', student);
+  document.body.classList.toggle('role-school', school);
   document.querySelectorAll('[data-admin-only]').forEach(el=>{ el.style.display = restricted ? 'none' : ''; });
   document.querySelectorAll('[data-hide-student]').forEach(el=>{ el.style.display = student ? 'none' : ''; });
   document.querySelectorAll('[data-student-only]').forEach(el=>{ el.style.display = student ? '' : 'none'; });
+  document.querySelectorAll('.sb-support').forEach(el=>{ el.style.display = restricted ? '' : 'none'; });
   const roleLabel = document.getElementById('tbUserRole');
-  if(roleLabel) roleLabel.textContent = student ? 'Student' : 'Super Admin';
+  if(roleLabel) roleLabel.textContent = student ? 'Student' : school ? 'School' : 'Super Admin';
   applySectionAccess();
 }
 
@@ -1783,7 +1956,16 @@ const TOGGLABLE_SECTIONS = [
 // both roles, except Questions (holds the answer key), which stayed hidden
 // from Students. The admin can change any of this from Settings.
 const DEFAULT_SECTION_ACCESS = {};
-TOGGLABLE_SECTIONS.forEach(s=>{ DEFAULT_SECTION_ACCESS[s.key] = { student:true }; });
+TOGGLABLE_SECTIONS.forEach(s=>{ DEFAULT_SECTION_ACCESS[s.key] = { student:true, school:true }; });
+// Extra pages only School logins can be given (students never see these).
+const SCHOOL_EXTRA_SECTIONS = [
+  {key:'dashboard', label:'Dashboard',            group:'School Login Pages'},
+  {key:'students',  label:'Students (view only)', group:'School Login Pages'}
+];
+const SCHOOL_PAGES = SCHOOL_EXTRA_SECTIONS.map(s=>s.key);
+const DEFAULT_SCHOOL_EXTRA = {};
+SCHOOL_EXTRA_SECTIONS.forEach(s=>{ DEFAULT_SCHOOL_EXTRA[s.key] = { school:true }; });
+function sectionCfg(key){ return sectionAccess[key] || DEFAULT_SECTION_ACCESS[key] || DEFAULT_SCHOOL_EXTRA[key] || {}; }
 let sectionAccess = JSON.parse(JSON.stringify(DEFAULT_SECTION_ACCESS));
 let unsubSectionAccess = null;
 
@@ -1794,6 +1976,9 @@ function subscribeSectionAccess(){
     const merged = {};
     TOGGLABLE_SECTIONS.forEach(s=>{
       merged[s.key] = { ...DEFAULT_SECTION_ACCESS[s.key], ...(saved[s.key]||{}) };
+    });
+    SCHOOL_EXTRA_SECTIONS.forEach(s=>{
+      merged[s.key] = { ...DEFAULT_SCHOOL_EXTRA[s.key], ...(saved[s.key]||{}) };
     });
     sectionAccess = merged;
     applySectionAccess();
@@ -1806,6 +1991,16 @@ function subscribeSectionAccess(){
 const ADMIN_ONLY_SECTIONS = ['subjects','chapters','topics','notifications','studentProgress'];
 function sectionAllowed(key){
   if(!isRestrictedRole()) return true; // admins always see every section
+  if(isSchoolRole()){
+    // School logins: only Dashboard, Students and the learning sections — each
+    // one the admin can switch off in Settings → Section Access.
+    if(SCHOOL_PAGES.includes(key) || DEFAULT_SECTION_ACCESS[key]){
+      const pack = (currentProfile && currentProfile.loginSectionAccessOverrides) || {};
+      if(Object.prototype.hasOwnProperty.call(pack, key)) return pack[key] !== false; // this school's own pack
+      return sectionCfg(key).school !== false;
+    }
+    return key === 'noAccess';
+  }
   if(ADMIN_ONLY_SECTIONS.includes(key)) return false;
   if(!DEFAULT_SECTION_ACCESS[key]) return true; // not a togglable section (e.g. dashboard)
   const overrides = (currentProfile && currentProfile.sectionAccessOverrides) || {};
@@ -1825,12 +2020,26 @@ function applySectionAccess(){
   if(activePage && activePage.id.startsWith('page-')){
     const key = activePage.id.slice(5);
     const disallowed = DEFAULT_SECTION_ACCESS[key] && !sectionAllowed(key);
-    if(isRestrictedRole()){
+    if(isSchoolRole()){
+      const viewer = ['resourceViewer','lessonViewer','audioViewer'].includes(key);
+      if((!viewer && !sectionAllowed(key)) || key==='noAccess'){
+        const home = restrictedHomePage();
+        if(home !== key) goToPage(home);
+      }
+    } else if(isRestrictedRole()){
       if(disallowed || key==='dashboard' || key==='noAccess') goToPage(studentHomePage());
     } else if(disallowed || key==='noAccess') goToPage('dashboard');
   }
+  if(isSchoolRole()){
+    // Dashboard / User Management / Students for School logins, as set in Settings.
+    document.querySelectorAll('[data-school-ok]').forEach(el=>{
+      el.style.display = sectionAllowed(el.dataset.page || 'students') ? '' : 'none';
+    });
+    syncSchoolStudentsListener();
+  }
   const statGrid = document.getElementById('statGrid');
-  if(statGrid) initDashboard();
+  if(statGrid){ initDashboard(); refreshDependentViews(); }
+  renderBottomNav();
   // Subjects or packs changed → re-sync which materials this device downloads.
   Object.values(RESOURCE_MODULES).forEach(cfg=>{ syncResourceSubscriptions(cfg); if(cfg.live) renderResourceBrowser(cfg); });
 }
@@ -1839,20 +2048,24 @@ function renderSectionAccessSettings(){
   const body = document.getElementById('sectionAccessBody');
   if(!body) return;
   let lastGroup = null;
-  body.innerHTML = TOGGLABLE_SECTIONS.map(s=>{
-    const groupRow = s.group !== lastGroup ? `<tr><td colspan="2" style="padding-top:1rem;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);border-bottom:none;">${escapeHtml(s.group)}</td></tr>` : '';
+  const box = (key, role, on)=>`<input type="checkbox" data-section-key="${key}" data-section-role="${role}" ${on?'checked':''} aria-label="${role} access">`;
+  body.innerHTML = [...SCHOOL_EXTRA_SECTIONS, ...TOGGLABLE_SECTIONS].map(s=>{
+    const groupRow = s.group !== lastGroup ? `<tr><td colspan="3" style="padding-top:1rem;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);border-bottom:none;">${escapeHtml(s.group)}</td></tr>` : '';
     lastGroup = s.group;
-    const cfg = sectionAccess[s.key] || DEFAULT_SECTION_ACCESS[s.key];
+    const cfg = sectionCfg(s.key);
+    const schoolOnly = SCHOOL_PAGES.includes(s.key);
     return `${groupRow}<tr>
       <td>${escapeHtml(s.label)}</td>
-      <td style="text-align:center;"><input type="checkbox" data-section-key="${s.key}" data-section-role="student" ${cfg.student!==false?'checked':''}></td>
+      <td style="text-align:center;">${schoolOnly ? '<span style="color:var(--text-3);" title="Students never see this page">—</span>' : box(s.key,'student',cfg.student!==false)}</td>
+      <td style="text-align:center;">${box(s.key,'school',cfg.school!==false)}</td>
     </tr>`;
   }).join('');
 }
 
 document.getElementById('sectionAccessSaveBtn').addEventListener('click', async ()=>{
   const draft = {};
-  TOGGLABLE_SECTIONS.forEach(s=>{ draft[s.key] = { student:true }; });
+  TOGGLABLE_SECTIONS.forEach(s=>{ draft[s.key] = { student:true, school:true }; });
+  SCHOOL_EXTRA_SECTIONS.forEach(s=>{ draft[s.key] = { school:true }; });
   document.querySelectorAll('#sectionAccessBody input[type="checkbox"]').forEach(cb=>{
     draft[cb.dataset.sectionKey][cb.dataset.sectionRole] = cb.checked;
   });
@@ -1870,10 +2083,10 @@ document.getElementById('sectionAccessSaveBtn').addEventListener('click', async 
    role) and can be flipped to Allow or Block just for that one person.
    Stored per-user as sectionAccessOverrides: { sectionKey: true|false }.
 */
-function sectionOverridesRowsHtml(overrides){
+function sectionOverridesRowsHtml(overrides, sections){
   overrides = (overrides && typeof overrides==='object') ? overrides : {};
   let lastGroup = null;
-  return TOGGLABLE_SECTIONS.map(s=>{
+  return (sections || TOGGLABLE_SECTIONS).map(s=>{
     const groupRow = s.group !== lastGroup
       ? `<div style="font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);margin:${lastGroup?'.6rem':'0'} 0 .25rem;">${escapeHtml(s.group)}</div>`
       : '';
@@ -1890,6 +2103,8 @@ function sectionOverridesRowsHtml(overrides){
     </div>`;
   }).join('');
 }
+// Sections a School login's pack covers: its extra pages plus the learning sections.
+function schoolPackSections(){ return [...SCHOOL_EXTRA_SECTIONS, ...TOGGLABLE_SECTIONS]; }
 function readSectionOverrides(containerEl){
   const overrides = {};
   if(!containerEl) return overrides;
@@ -1922,7 +2137,8 @@ function buildSearchResults(query){
   const results = [];
   Object.entries(ENTITY_SEARCH_META).forEach(([key, meta])=>{
     if(meta.adminOnly && isRestrictedRole()) return; // hidden pages stay unsearchable for students
-    if((key==='students'||key==='schools') && isRestrictedRole()) return; // Students/Schools pages are hidden from students
+    if(key==='schools' && isRestrictedRole()) return; // Schools page is admin-only
+    if(key==='students' && isStudentRole()) return; // students never see the Students list
     if(!sectionAllowed(key)) return; // admin hasn't granted this role access to this section
     visibleEntityRows(key).forEach(r=>{
       const label = meta.get(r);
@@ -2037,6 +2253,155 @@ function studentHomePage(){
   });
   return item ? item.dataset.page : 'noAccess';
 }
+// School logins land on the first page the admin has opened for them.
+function restrictedHomePage(){
+  if(isSchoolRole()){
+    const order = [...SCHOOL_PAGES, ...TOGGLABLE_SECTIONS.map(s=>s.key)];
+    return order.find(k=>sectionAllowed(k)) || 'noAccess';
+  }
+  return studentHomePage();
+}
+/* =================================================================
+   PHONE / BROWSER BACK BUTTON
+   While the portal is anywhere other than its home screen, one extra
+   history entry (the "guard") is kept. Pressing Back uses it up, and the
+   portal goes up one level instead: closes an open popup or menu, leaves a
+   file, steps out of a folder, or returns to the home page. From the home
+   screen Back leaves the portal as normal.
+   ================================================================= */
+function backHomePage(){ return isRestrictedRole() ? restrictedHomePage() : 'dashboard'; }
+function activePageKey(){ const a = document.querySelector('.page.active'); return a ? a.id.slice(5) : ''; }
+function portalAtRoot(){
+  if(!currentUser || !document.getElementById('app').classList.contains('show')) return true;
+  if(document.getElementById('modalOverlay').classList.contains('show')) return false;
+  if(document.getElementById('sidebar').classList.contains('open')) return false;
+  const sw = document.getElementById('tbSearchWrap'); if(sw && sw.classList.contains('mobile-open')) return false;
+  const key = activePageKey();
+  if(key !== backHomePage()) return false;
+  if(RESOURCE_MODULES[key] && RESOURCE_MODULES[key].browsePath && RESOURCE_MODULES[key].browsePath.subjectId) return false;
+  if(key==='myProgress' && mpView && mpView.mode!=='dashboard') return false;
+  return true;
+}
+function ensureBackGuard(){
+  try{
+    if(portalAtRoot()) return;
+    if(history.state && history.state.sattvaGuard) return;
+    history.pushState({ sattvaGuard:true }, '');
+  }catch(e){}
+}
+let backGuardQueued = false;
+function ensureBackGuardSoon(){ // after the current render finishes
+  if(backGuardQueued) return;
+  backGuardQueued = true;
+  setTimeout(()=>{ backGuardQueued = false; ensureBackGuard(); }, 0);
+}
+// Goes up one level. Returns false when already at the top.
+function goUpOneLevel(){
+  if(!currentUser) return false;
+  if(document.getElementById('notifOverlay').classList.contains('show')) return true; // must press "Got it"
+  if(document.getElementById('modalOverlay').classList.contains('show')){
+    if(!(bulkState && bulkState.uploading)) closeModal();
+    return true;
+  }
+  const sb = document.getElementById('sidebar');
+  if(sb.classList.contains('open')){ sb.classList.remove('open'); return true; }
+  const sw = document.getElementById('tbSearchWrap');
+  if(sw && sw.classList.contains('mobile-open')){ closeMobileSearch(); return true; }
+  if(document.fullscreenElement || document.webkitFullscreenElement){
+    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    return true;
+  }
+  const key = activePageKey();
+  if(key==='resourceViewer'){ document.getElementById('aiViewerBackBtn').click(); return true; }
+  if(key==='lessonViewer'){ goToPage('lessons'); return true; }
+  if(key==='audioViewer'){ goToPage('audioLessons'); return true; }
+  if(RESOURCE_MODULES[key] || ACADEMIC_BROWSE_KEYS.includes(key)){
+    const crumbBack = document.querySelector('#breadcrumb-'+key+' .crumb-back');
+    if(crumbBack){ crumbBack.click(); return true; }
+  }
+  if(key==='myProgress' && mpView && mpView.mode!=='dashboard'){ mpView = { mode:'dashboard' }; renderMyProgress(); return true; }
+  if(key==='studentProgress' && adminProgressSelected){ adminProgressSelected = null; renderStudentProgressPage(); return true; }
+  const home = backHomePage();
+  if(key !== home){ goToPage(home); return true; }
+  return false;
+}
+window.addEventListener('popstate', ()=>{
+  if(!currentUser) return;
+  if(goUpOneLevel()) ensureBackGuard();
+  else history.back(); // already at the top — leave the portal
+});
+// Popups, the mobile menu and mobile search also count as a level.
+['modalOverlay','sidebar','tbSearchWrap'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) new MutationObserver(()=>ensureBackGuardSoon()).observe(el, { attributes:true, attributeFilter:['class'] });
+});
+
+/* =================================================================
+   MOBILE BOTTOM TAB BAR
+   Up to four tabs for the sections this login uses most, plus "More",
+   which opens the full menu. Tabs follow the sidebar: a section hidden
+   for this login (role or Section Access) never shows as a tab.
+   ================================================================= */
+const BOTTOM_NAV_PLAN = {
+  admin:   ['dashboard','schools','students','notifications'],
+  school:  ['dashboard','students','aiKnowledge','lessons','audioLessons','studyMaterials','questionBank','questionPaper'],
+  student: ['myProgress','aiKnowledge','lessons','noticeBoard','audioLessons','studyMaterials','questionBank','questionPaper']
+};
+const BOTTOM_NAV_LABELS = {
+  dashboard:'Dashboard', schools:'Schools', students:'Students', notifications:'Notices', myProgress:'Progress',
+  noticeBoard:'Notices', aiKnowledge:'AI Learning', lessons:'Lessons', audioLessons:'Audio',
+  studyMaterials:'Mock Tests', questionBank:'Questions', questionPaper:'Past Papers'
+};
+// Viewer pages belong to their section's tab.
+const BOTTOM_NAV_PARENT = { lessonViewer:'lessons', audioViewer:'audioLessons' };
+let bottomNavKeys = [];
+function sidebarItemVisible(key){
+  const el = document.querySelector(`#sbNav .sb-item[data-page="${key}"]`);
+  return !!el && el.style.display !== 'none' && sectionAllowed(key);
+}
+function renderBottomNav(){
+  const nav = document.getElementById('bottomNav');
+  if(!nav) return;
+  if(!currentUser){ nav.innerHTML = ''; bottomNavKeys = []; return; }
+  const role = isSchoolRole() ? 'school' : isStudentRole() ? 'student' : 'admin';
+  const keys = BOTTOM_NAV_PLAN[role].filter(sidebarItemVisible).slice(0, 4);
+  if(keys.join() === bottomNavKeys.join() && nav.childElementCount){ syncBottomNavActive(); return; }
+  bottomNavKeys = keys;
+  nav.innerHTML = keys.map(k=>{
+    const icon = (document.querySelector(`#sbNav .sb-item[data-page="${k}"] i`) || {}).className || 'fa-solid fa-circle';
+    const badge = k==='noticeBoard' ? '<span class="bn-badge" id="nbBadgeMobile" hidden></span>' : '';
+    return `<button type="button" class="bn-item" data-bn-page="${k}"><i class="${escapeAttr(icon)}" aria-hidden="true"></i><span class="bn-label">${escapeHtml(BOTTOM_NAV_LABELS[k]||k)}</span>${badge}</button>`;
+  }).join('') + `<button type="button" class="bn-item" data-bn-more aria-label="More sections"><i class="fa-solid fa-grip" aria-hidden="true"></i><span class="bn-label">More</span></button>`;
+  updateNoticeBadge();
+  syncBottomNavActive();
+}
+function syncBottomNavActive(){
+  const nav = document.getElementById('bottomNav');
+  if(!nav) return;
+  let key = activePageKey();
+  if(key==='resourceViewer'){
+    const m = Object.values(RESOURCE_MODULES).find(c=>document.getElementById('aiViewerBackBtn').textContent.includes(c.label));
+    key = m ? m.key : key;
+  }
+  key = BOTTOM_NAV_PARENT[key] || key;
+  const onTab = bottomNavKeys.includes(key);
+  const menuOpen = document.getElementById('sidebar').classList.contains('open');
+  nav.querySelectorAll('.bn-item').forEach(b=>{
+    const active = b.hasAttribute('data-bn-more') ? (menuOpen || !onTab) : (!menuOpen && b.dataset.bnPage===key);
+    b.classList.toggle('active', active);
+    if(active) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+  });
+}
+document.getElementById('bottomNav').addEventListener('click', (e)=>{
+  const b = e.target.closest('.bn-item');
+  if(!b) return;
+  const sb = document.getElementById('sidebar');
+  if(b.hasAttribute('data-bn-more')){ sb.classList.toggle('open'); syncBottomNavActive(); return; }
+  sb.classList.remove('open');
+  goToPage(b.dataset.bnPage);
+});
+new MutationObserver(()=>syncBottomNavActive()).observe(document.getElementById('sidebar'), { attributes:true, attributeFilter:['class'] });
+
 // Leaving a lesson video or audio page must stop it — otherwise it keeps
 // playing in the hidden page.
 function stopMediaPlayback(){
@@ -2048,8 +2413,10 @@ function stopMediaPlayback(){
   if(card) card.classList.remove('is-playing');
 }
 window.goToPage = function(key){
-  if(isRestrictedRole() && (key==='dashboard' || key==='noAccess')) key = studentHomePage();
-  if(isRestrictedRole() && ['schools','students','createUser','settings','notifications','studentProgress'].includes(key)) return;
+  if(isStudentRole() && (key==='dashboard' || key==='noAccess')) key = studentHomePage();
+  if(isSchoolRole() && (key==='noAccess' || !sectionAllowed(key))) key = restrictedHomePage();
+  if(isStudentRole() && ['schools','students','createUser','settings','notifications','studentProgress'].includes(key)) return;
+  if(isSchoolRole() && ['schools','createUser','settings','notifications','studentProgress','myProgress','noticeBoard'].includes(key)) return;
   if(!isRestrictedRole() && key==='myProgress') key = 'studentProgress';
   if(!isRestrictedRole() && key==='noticeBoard') key = 'notifications';
   if(!sectionAllowed(key)) return; // admin hasn't granted this role access to this section
@@ -2068,6 +2435,8 @@ window.goToPage = function(key){
   if(key==='notifications' && !isRestrictedRole()) renderNotificationsPage();
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('main').scrollTo(0,0);
+  ensureBackGuard();
+  syncBottomNavActive();
 };
 
 /* (Activity log removed — Recent Activity panel is no longer shown) */
@@ -2080,7 +2449,7 @@ const BOARD_OPTIONS = ['State'];
 const ENTITIES = {
   schools: {
     label:'Schools', singular:'School', icon:'fa-school', collection:'schools',
-    columns:[{k:'name',l:'School Name'},{k:'shortCode',l:'Short Code'},{k:'address',l:'Address'},{k:'pocName',l:'POC Name'},{k:'pocPhone',l:'POC Phone'},{k:'assignedSubjectIds',l:'Subjects Visible to Students',relList:'subjects'},{k:'status',l:'Status',pill:true}],
+    columns:[{k:'name',l:'School Name'},{k:'shortCode',l:'Short Code'},{k:'address',l:'Address'},{k:'pocName',l:'POC Name'},{k:'pocPhone',l:'POC Phone'},{k:'assignedSubjectIds',l:'Subjects Visible to Students',relList:'subjects'},{k:'loginEmail',l:'School Login',schoolLogin:true},{k:'status',l:'Status',pill:true}],
     fields:[
       {k:'name',l:'School Name',type:'text',req:true,ph:'e.g. Sri Hari Sattva Jnana High School'},
       {k:'shortCode',l:'School Short Code',type:'shortCode',req:true,ph:'e.g. SHJ'},
@@ -2100,7 +2469,8 @@ const ENTITIES = {
     fields:[
       {k:'registerNumber',l:'Register Number',type:'readonly',ph:'Assigned automatically when the student is saved'},
       {k:'name',l:'Full Name',type:'text',req:true},
-      {k:'email',l:'Email',type:'email',req:true},
+      {k:'email',l:'Login Email',type:'email',req:true,lockOnEdit:true},
+      {k:'loginPassword',l:'Temporary Password',type:'text',newOnly:true,ph:'At least 6 characters — share it with the student'},
       {k:'phone',l:'Contact Number',type:'tel',ph:'e.g. 98765 43210'},
       {k:'dob',l:'Date of Birth',type:'date'},
       {k:'city',l:'City',type:'text',ph:'e.g. Bengaluru'},
@@ -2139,7 +2509,7 @@ const ENTITIES = {
       {k:'name',l:'Topic Name',type:'text',req:true},
       {k:'subjectId',l:'Subject',type:'relation',rel:'subjects',req:true},
       {k:'chapterId',l:'Chapter',type:'relation',rel:'chapters',req:true,filterBy:['subjectId']},
-      {k:'status',l:'Status',type:'select',opts:['Published','Draft'],def:'Draft'}
+      {k:'status',l:'Status',type:'select',opts:['Published','Draft'],def:'Published'}
     ]
   },
 };
@@ -2289,6 +2659,7 @@ function renderAcademicBreadcrumb(key){
   if(bb) bb.addEventListener('click', ()=>{ entityBrowsePath[key] = crumbs[crumbs.length-2].path; renderAcademicBrowser(key); });
 }
 function renderAcademicBrowser(key){
+  ensureBackGuardSoon();
   const grid = document.getElementById('grid-'+key);
   const tableWrap = document.getElementById('tableWrap-'+key);
   if(!grid || !tableWrap) return;
@@ -2378,7 +2749,7 @@ function renderEntityPage(key){
     const readOnly = isReadOnlyForEntity(key);
     page.innerHTML = `
       <div class="page-head">
-        <div><h2>${cfg.label}</h2><p>${readOnly ? `View ${cfg.label.toLowerCase()} for your assigned subjects.` : `Manage all ${cfg.label.toLowerCase()} in the portal.`}</p></div>
+        <div><h2>${cfg.label}</h2><p>${(isSchoolRole() && key==='students') ? 'Students registered at your school (view only).' : readOnly ? `View ${cfg.label.toLowerCase()} for your assigned subjects.` : `Manage all ${cfg.label.toLowerCase()} in the portal.`}</p></div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
           ${key==='schools' ? `<button class="btn btn-ghost" id="schoolExportBtn"><i class="fa-solid fa-file-excel"></i> Export to Excel</button>` : ''}
           ${readOnly ? '' : `<button class="btn btn-primary" id="addBtn-${key}"><i class="fa-solid fa-plus"></i> Add ${cfg.singular}</button>`}
@@ -2386,11 +2757,11 @@ function renderEntityPage(key){
       </div>
       <div class="table-panel">
         ${key==='students' ? `<div class="stu-toolbar">
-          <label for="studentSchoolFilter">School</label>
-          <select class="f-input" id="studentSchoolFilter"><option value="">All schools</option></select>
+          ${isSchoolRole() ? '' : `<label for="studentSchoolFilter">School</label>
+          <select class="f-input" id="studentSchoolFilter"><option value="">All schools</option></select>`}
           <span class="stu-count" id="studentFilterCount"></span>
           ${readOnly ? '' : `<button class="btn btn-ghost" id="studentRegNoBtn" title="Give register numbers to students who don't have one yet"><i class="fa-solid fa-id-card"></i> Assign Register Numbers</button>`}
-          <button class="btn btn-ghost" id="studentExportBtn"><i class="fa-solid fa-file-excel"></i> Export to Excel</button>
+          ${isSchoolRole() ? '' : `<button class="btn btn-ghost" id="studentExportBtn"><i class="fa-solid fa-file-excel"></i> Export to Excel</button>`}
         </div>
         ${readOnly ? '' : `<div class="stu-bulkbar" id="studentBulkBar">
           <span id="studentBulkCount"></span>
@@ -2404,8 +2775,10 @@ function renderEntityPage(key){
     if(!readOnly) document.getElementById('addBtn-'+key).addEventListener('click', ()=>openEntityModal(key));
     if(key==='schools') document.getElementById('schoolExportBtn').addEventListener('click', exportSchoolsToExcel);
     if(key==='students'){
-      document.getElementById('studentSchoolFilter').addEventListener('change', (e)=>{ studentSchoolFilter = e.target.value; selectedStudentIds.clear(); renderEntityTable('students'); });
-      document.getElementById('studentExportBtn').addEventListener('click', exportStudentsToExcel);
+      const sf = document.getElementById('studentSchoolFilter');
+      if(sf) sf.addEventListener('change', (e)=>{ studentSchoolFilter = e.target.value; selectedStudentIds.clear(); renderEntityTable('students'); });
+      const ex = document.getElementById('studentExportBtn');
+      if(ex) ex.addEventListener('click', exportStudentsToExcel);
       const regBtn = document.getElementById('studentRegNoBtn');
       if(regBtn) regBtn.addEventListener('click', assignMissingRegisterNumbers);
       if(!readOnly){
@@ -2431,6 +2804,7 @@ function renderEntityPage(key){
   if(entityUnsubs[key]){ try{ entityUnsubs[key](); }catch(e){} delete entityUnsubs[key]; }
   // Students aren't allowed to read the full Schools / Students lists
   // (security rules block it), and never see those pages anyway.
+  if(isSchoolRole() && key==='students'){ syncSchoolStudentsListener(); return; }
   if(isRestrictedRole() && (key==='schools' || key==='students')) return;
   // Chapters and Topics pages are admin-only, and every learning material
   // already carries its own chapter/topic names — so students don't download
@@ -2445,14 +2819,47 @@ function renderEntityPage(key){
     // A student's subject list is built from Subjects, so redraw it once they arrive.
     if(key==='subjects' && isRestrictedRole()) Object.values(RESOURCE_MODULES).forEach(c=>{ if(c.live) renderResourceBrowser(c); });
     if((key==='chapters' || key==='subjects') && !isRestrictedRole()) scheduleProgressIndexWrite(); // chapter/subject renamed
-    if(key==='students' || key==='schools'){ const pg = document.getElementById('page-studentProgress'); if(pg && pg.classList.contains('active')) renderStudentProgressPage(); }
+    if(key==='students' || key==='schools'){
+      const pg = document.getElementById('page-studentProgress'); if(pg && pg.classList.contains('active')) renderStudentProgressPage();
+      if(!isRestrictedRole()) scheduleSchoolCountsWrite(); // a stale cached count is corrected as soon as fresh data arrives
+    }
   }, (err)=>{ console.warn(key, err); });
 }
 const entityUnsubs = {};
 
 // Re-run relation-name hydration for every entity (so e.g. a Subjects update
 // also refreshes the "Subject" name column shown on Chapters) then re-render.
+// Topics saved before topics had a Subject field only know their Chapter.
+// Fill in the Subject from that chapter so they show up when browsing, and
+// (for admins) save it once so the record is fixed for good.
+let topicSubjectBackfillRunning = false;
+function fillLegacyTopicSubjects(){
+  const topics = entityCache.topics || [];
+  if(!topics.length || !entityCache.chapters) return;
+  const toSave = [];
+  topics.forEach(t=>{
+    if(t.subjectId || !t.chapterId) return;
+    const sid = subjectIdOfChapter(t.chapterId);
+    if(!sid) return;
+    t.subjectId = sid;
+    toSave.push({ id:t.id, subjectId:sid });
+  });
+  if(!toSave.length || isRestrictedRole() || topicSubjectBackfillRunning) return;
+  topicSubjectBackfillRunning = true;
+  (async ()=>{
+    try{
+      for(let i=0;i<toSave.length;i+=400){
+        const batch = writeBatch(db);
+        toSave.slice(i,i+400).forEach(u=>batch.update(doc(db,'topics',u.id), { subjectId:u.subjectId }));
+        await batch.commit();
+      }
+      console.info(`Added the subject to ${toSave.length} older topic(s).`);
+    }catch(err){ console.warn('Could not update older topics', err); }
+    finally{ topicSubjectBackfillRunning = false; }
+  })();
+}
 function rehydrateAll(){
+  fillLegacyTopicSubjects();
   ENTITY_KEYS.forEach(k=>hydrateRelations(k, entityCache[k]||[]));
   ENTITY_KEYS.forEach(k=> ACADEMIC_BROWSE_KEYS.includes(k) ? renderAcademicBrowser(k) : renderEntityTable(k));
   refreshDependentViews();
@@ -2479,6 +2886,7 @@ function hydrateRelations(key, rows){
 
 function renderEntityTable(key){
   const cfg = ENTITIES[key];
+  const cols = (isSchoolRole() && key==='students') ? cfg.columns.filter(c=>!c.lastLogin) : cfg.columns;
   let rows = visibleEntityRows(key);
   if(ACADEMIC_BROWSE_KEYS.includes(key)){
     const levels = academicBrowseLevels(key);
@@ -2504,12 +2912,12 @@ function renderEntityTable(key){
   if(!tbl) return;
   const readOnly = isReadOnlyForEntity(key);
   if(!rows.length && key==='students' && studentSchoolFilter){
-    tbl.innerHTML = `<tr><td colspan="${cfg.columns.length+1}"><div class="empty-state"><i class="fa-solid ${cfg.icon}"></i><h4>No students in this school</h4><p>Pick another school, or choose "All schools" to see everyone.</p></div></td></tr>`;
+    tbl.innerHTML = `<tr><td colspan="${cols.length+1}"><div class="empty-state"><i class="fa-solid ${cfg.icon}"></i><h4>No students in this school</h4><p>Pick another school, or choose "All schools" to see everyone.</p></div></td></tr>`;
     return;
   }
   if(!rows.length){
-    const emptyMsg = isRestrictedRole() ? 'Nothing has been assigned to you yet.' : `Click "Add ${cfg.singular}" to create the first one.`;
-    tbl.innerHTML = `<tr><td colspan="${cfg.columns.length+1}"><div class="empty-state"><i class="fa-solid ${cfg.icon}"></i><h4>No ${cfg.label.toLowerCase()} yet</h4><p>${emptyMsg}</p></div></td></tr>`;
+    const emptyMsg = (isSchoolRole() && key==='students') ? 'No students have been added to your school yet.' : isRestrictedRole() ? 'Nothing has been assigned to you yet.' : `Click "Add ${cfg.singular}" to create the first one.`;
+    tbl.innerHTML = `<tr><td colspan="${cols.length+1}"><div class="empty-state"><i class="fa-solid ${cfg.icon}"></i><h4>No ${cfg.label.toLowerCase()} yet</h4><p>${emptyMsg}</p></div></td></tr>`;
     return;
   }
   const selSet = selSetFor(key);
@@ -2518,10 +2926,11 @@ function renderEntityTable(key){
   const rowSelAttr = key==='students' ? 'data-student-id' : 'data-sel-id';
   const allSel = selectable && rows.length>0 && rows.every(r=>selSet.has(r.id));
   const someSel = selectable && !allSel && rows.some(r=>selSet.has(r.id));
-  tbl.innerHTML = `<thead><tr>${selectable ? `<th class="sel-col"><input type="checkbox" id="${selAllId}" title="Select all shown" aria-label="Select all shown" ${allSel?'checked':''}></th>` : ''}${cfg.columns.map(c=>`<th>${c.l}</th>`).join('')}<th></th></tr></thead>
-    <tbody>${rows.map(r=>`<tr${selectable && selSet.has(r.id) ? ' class="row-selected"' : ''}>${selectable ? `<td class="sel-col"><input type="checkbox" ${rowSelAttr}="${r.id}" aria-label="Select ${escapeHtml(r.name||'row')}" ${selSet.has(r.id)?'checked':''}></td>` : ''}${cfg.columns.map(c=>renderCell(c,r)).join('')}
+  tbl.innerHTML = `<thead><tr>${selectable ? `<th class="sel-col"><input type="checkbox" id="${selAllId}" title="Select all shown" aria-label="Select all shown" ${allSel?'checked':''}></th>` : ''}${cols.map(c=>`<th>${c.l}</th>`).join('')}<th></th></tr></thead>
+    <tbody>${rows.map(r=>`<tr${selectable && selSet.has(r.id) ? ' class="row-selected"' : ''}>${selectable ? `<td class="sel-col"><input type="checkbox" ${rowSelAttr}="${r.id}" aria-label="Select ${escapeHtml(r.name||'row')}" ${selSet.has(r.id)?'checked':''}></td>` : ''}${cols.map(c=>renderCell(c,r)).join('')}
       <td style="text-align:right;white-space:nowrap;">
         ${readOnly ? '' : `${key==='students' ? `<button class="icon-btn" title="Send password reset link" onclick="sendStudentReset('${r.id}')"><i class="fa-solid fa-key"></i></button><button class="icon-btn" title="Section Access" onclick="openAccessModal('${key}','${r.id}')"><i class="fa-solid fa-shield-halved"></i></button>` : ''}
+        ${key==='schools' && r.loginUid ? `<button class="icon-btn" title="School login's Section Access" onclick="openAccessModal('schools','${r.id}')"><i class="fa-solid fa-shield-halved"></i></button>` : ''}
         ${key==='subjects' && !r.parentSubjectId ? `<button class="icon-btn" title="Add Sub-Subjects" onclick="openSubSubjectModal('${r.id}')"><i class="fa-solid fa-diagram-project"></i></button>` : ''}
         <button class="icon-btn" onclick="openEntityModal('${key}','${r.id}')"><i class="fa-solid fa-pen"></i></button>
         <button class="icon-btn danger" onclick="deleteEntity('${key}','${r.id}')"><i class="fa-solid fa-trash"></i></button>`}
@@ -2700,11 +3109,12 @@ async function exportSchoolsToExcel(){
     'POC Email': r.pocEmail || '',
     'Subjects Visible to Students': (Array.isArray(r.assignedSubjectIds) ? r.assignedSubjectIds : []).map(id=>subjectName.get(id)).filter(Boolean).join(', '),
     'No. of Students': students.filter(st=>st.schoolId===r.id).length,
+    'School Login': r.loginUid ? `${r.loginEmail||''}${r.loginActive===false?' (disabled)':''}` : '',
     'Status': r.status || '',
     'Created On': tsToDate(r.createdAt) ? tsToDate(r.createdAt).toLocaleDateString('en-IN') : ''
   }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:6},{wch:36},{wch:12},{wch:40},{wch:24},{wch:20},{wch:16},{wch:30},{wch:45},{wch:14},{wch:10},{wch:12}];
+  ws['!cols'] = [{wch:6},{wch:36},{wch:12},{wch:40},{wch:24},{wch:20},{wch:16},{wch:30},{wch:45},{wch:14},{wch:30},{wch:10},{wch:12}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Schools');
   XLSX.writeFile(wb, `Schools_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -2750,6 +3160,11 @@ function renderCell(col, row){
   if(col.avatar) return `<td><div style="display:flex;align-items:center;gap:.6rem;">${avatarHtml(val, row[col.photoKey||'photoUrl'], 'table-avatar')}<span>${val!==undefined && val!==null && val!=='' ? escapeHtml(String(val)) : '—'}</span></div></td>`;
   if(col.date){ const d = tsToDate(val); val = d ? d.toLocaleDateString('en-IN') : '—'; }
   if(col.datetime) val = fmtDateTime(col.get ? col.get(row) : val) || '—';
+  if(col.schoolLogin){
+    if(!row.loginUid) return `<td><span style="color:var(--text-3);">None</span></td>`;
+    const on = row.loginActive !== false;
+    return `<td style="white-space:nowrap;">${escapeHtml(row.loginEmail||'')} <span class="pill ${on?'pill-Active':'pill-Inactive'}">${on?'Active':'Disabled'}</span></td>`;
+  }
   if(col.lastLogin){
     const t = lastLoginText(row.id);
     return t ? `<td style="white-space:nowrap;">${escapeHtml(t)}</td>` : `<td><span style="color:var(--text-3);">Not yet</span></td>`;
@@ -2839,7 +3254,8 @@ async function bulkDeleteSubjects(ids){
   const allSubjectIds = [...new Set(ids.flatMap(collectSubjectIdsDeep))];
   const subjSet = new Set(allSubjectIds);
   const chapters = (entityCache.chapters||[]).filter(c=>subjSet.has(c.subjectId));
-  const topics   = (entityCache.topics||[]).filter(t=>subjSet.has(t.subjectId));
+  const chapSet  = new Set(chapters.map(c=>c.id));
+  const topics   = (entityCache.topics||[]).filter(t=>subjSet.has(t.subjectId) || chapSet.has(t.chapterId));
   const resDocs  = resourceDocsForSubjects(subjSet);
   const schools  = (entityCache.schools||[]).filter(sc=>Array.isArray(sc.assignedSubjectIds) && sc.assignedSubjectIds.some(x=>subjSet.has(x)));
   const subCount = allSubjectIds.length - ids.length;
@@ -2978,7 +3394,14 @@ window.deleteEntity = async function(key, id){
     let msg = 'Delete this school? This cannot be undone.';
     if(linked) msg += `\n\n${linked} student${linked===1?' is':'s are'} linked to it and will lose access to all subjects until you move them to another school.`;
     if(!confirm(msg)) return;
-    try{ await deleteDoc(doc(db, ENTITIES.schools.collection, id)); showToast(`${ENTITIES.schools.singular} deleted.`); }
+    const sc = (entityCache.schools||[]).find(x=>x.id===id);
+    try{
+      const batch = writeBatch(db);
+      batch.delete(doc(db, ENTITIES.schools.collection, id));
+      if(sc && sc.loginUid) batch.delete(doc(db,'users',sc.loginUid)); // its school login stops working too
+      await batch.commit();
+      showToast(`${ENTITIES.schools.singular} deleted.`);
+    }
     catch(err){ showToast(err.message, true); }
     return;
   }
@@ -3039,7 +3462,11 @@ window.openEntityModal = function(key, editId){
   // Chapter (and that Chapter's first Topic) in the same step.
   const offerSubjectExtras = (key==='subjects' && !editing);
   if(offerSubjectExtras) bodyHtml += renderSubjectExtrasHtml();
+  if(key==='students' && editing) bodyHtml = `<div id="studentLoginSetup" class="f-group" style="display:none;"></div>` + bodyHtml;
+  if(key==='schools') bodyHtml += schoolLoginBoxHtml(editing);
   document.getElementById('modalBody').innerHTML = bodyHtml;
+  if(key==='students' && editing) offerLoginSetup(editId);
+  if(key==='schools') wireSchoolLoginBox(editing);
   wireCascadingFields(cfg);
   if(offerSubjectExtras) wireSubjectExtras();
   document.getElementById('modalOverlay').classList.add('show');
@@ -3052,6 +3479,16 @@ window.openEntityModal = function(key, editId){
 
 /* -------- "Add Sub-Subject" shortcut on a Main Subject row -------- */
 /* Turns "Physics, Chemistry" or one-per-line text into a clean, de-duplicated list of names. */
+// Chapter names often contain commas ("Sets, Relations and Functions"), so
+// chapters are split on new lines only.
+function parseChapterNames(text){
+  const seen = new Set();
+  return String(text||'').split(/\n+/).map(x=>x.trim()).filter(x=>{
+    const k = x.toLowerCase();
+    if(!x || seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+}
 function parseSubSubjectNames(text){
   const seen = new Set();
   return String(text||'').split(/[\n,]+/).map(x=>x.trim()).filter(x=>{
@@ -3116,7 +3553,7 @@ window.openChapterBulkAdd = function(preSubjectId){
     </div>
     <div class="f-group"><label class="f-label">Chapter Names</label>
       <textarea class="f-input" style="padding-left:.9rem;min-height:150px;" id="chNames" placeholder="Chapter 1: Real Numbers&#10;Chapter 2: Polynomials&#10;Chapter 3: Pair of Linear Equations"></textarea>
-      <p id="chHint" style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">Type one chapter per line (or separate with commas).</p>
+      <p id="chHint" style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">Type one chapter per line.</p>
     </div>
     <div class="f-group"><label class="f-label">Status</label>
       <select class="f-input" style="padding-left:.9rem;" id="chStatus"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
@@ -3125,8 +3562,8 @@ window.openChapterBulkAdd = function(preSubjectId){
   const hint = document.getElementById('chHint');
   const btn = document.getElementById('modalSaveBtn');
   const refresh = ()=>{
-    const n = parseSubSubjectNames(namesEl.value).length;
-    hint.textContent = n ? `${n} chapter${n===1?'':'s'} will be added. One per line, or separate with commas.` : 'Type one chapter per line (or separate with commas).';
+    const n = parseChapterNames(namesEl.value).length;
+    hint.textContent = n ? `${n} chapter${n===1?'':'s'} will be added. One chapter per line.` : 'Type one chapter per line.';
     btn.textContent = n ? `Add ${n} Chapter${n===1?'':'s'}` : 'Add Chapters';
   };
   namesEl.addEventListener('input', refresh);
@@ -3138,7 +3575,7 @@ window.openChapterBulkAdd = function(preSubjectId){
   namesEl.focus();
   btn.onclick = async ()=>{
     const sid = document.getElementById('chSubject').value;
-    const names = parseSubSubjectNames(namesEl.value);
+    const names = parseChapterNames(namesEl.value);
     if(!sid){ showToast('Please choose a Subject.', true); return; }
     if(!names.length){ showToast('Type at least one chapter name.', true); return; }
     btn.disabled = true; btn.textContent = 'Saving...';
@@ -3218,13 +3655,17 @@ window.openAccessModal = function(key, id){
   const row = (entityCache[key]||[]).find(r=>r.id===id);
   if(!row) return;
   modalCtx = { key, editId:id };
+  const isSchool = key==='schools';
+  const field = isSchool ? 'loginSectionAccessOverrides' : 'sectionAccessOverrides';
   document.getElementById('modalTitle').textContent = `Section Access — ${row.name || cfg.singular}`;
   document.getElementById('modalBody').innerHTML = `
     <p style="font-size:.8rem;color:var(--text-2);margin:-.2rem 0 .9rem;">
-      Choose what ${escapeHtml(row.name||'this '+cfg.singular.toLowerCase())} can see. Sections left on "Plan default" follow the role-wide Section Access settings — use Allow/Block to give this one person a custom pack (e.g. Basic vs Premium).
+      ${isSchool
+        ? `Choose what this school's login (${escapeHtml(row.loginEmail||'')}) can see. Sections left on "Plan default" follow the School column in Settings → Section Access — use Allow/Block to give this school its own pack.`
+        : `Choose what ${escapeHtml(row.name||'this '+cfg.singular.toLowerCase())} can see. Sections left on "Plan default" follow the role-wide Section Access settings — use Allow/Block to give this one person a custom pack (e.g. Basic vs Premium).`}
     </p>
     <div class="ms-box" id="accessModalBox" style="max-height:360px;">
-      ${sectionOverridesRowsHtml(row.sectionAccessOverrides)}
+      ${sectionOverridesRowsHtml(row[field], isSchool ? schoolPackSections() : TOGGLABLE_SECTIONS)}
     </div>`;
   document.getElementById('modalOverlay').classList.add('show');
   document.getElementById('modalBox').classList.remove('wide');
@@ -3235,8 +3676,7 @@ window.openAccessModal = function(key, id){
     const btn = document.getElementById('modalSaveBtn');
     btn.disabled = true; btn.textContent = 'Saving...';
     try{
-      const sectionAccessOverrides = readSectionOverrides(document.getElementById('accessModalBox'));
-      await updateDoc(doc(db, cfg.collection, id), { sectionAccessOverrides });
+      await updateDoc(doc(db, cfg.collection, id), { [field]: readSectionOverrides(document.getElementById('accessModalBox')) });
       showToast(`Section access updated for ${row.name||cfg.singular}.`);
       closeModal();
     }catch(err){ showToast(err.message, true); }
@@ -3380,7 +3820,7 @@ async function saveSubjectWithExtras(){
       if(addTopic){
         const topicData = {
           name: topicName, board: data.board, className: data.className,
-          subjectId: subjectRef.id, chapterId: chapterRef.id, status: 'Draft', createdAt: new Date().toISOString()
+          subjectId: subjectRef.id, chapterId: chapterRef.id, status: 'Published', createdAt: new Date().toISOString()
         };
         await addDoc(collection(db, 'topics'), topicData);
         parts.push('Topic added.');
@@ -3396,7 +3836,13 @@ async function saveSubjectWithExtras(){
   finally{ btn.disabled=false; btn.textContent='Save'; }
 }
 function renderField(f, editing, cfgFields){
+  const isRealEdit = !!(editing && editing.id);
+  if(f.newOnly && isRealEdit) return '';
   const val = editing ? (editing[f.k] ?? (f.def ?? '')) : (f.def ?? '');
+  if(f.lockOnEdit && isRealEdit){
+    return `<div class="f-group"><label class="f-label">${f.l}</label><input class="f-input" style="padding-left:.9rem;" id="fld-${f.k}" value="${escapeHtml(String(val||''))}" disabled>
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">This is the email the student signs in with, so it can't be changed here.</p></div>`;
+  }
   if(f.type==='select'){
     return `<div class="f-group"><label class="f-label">${f.l}</label><select class="f-input" style="padding-left:.9rem;" id="fld-${f.k}">
       ${f.opts.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}
@@ -3605,6 +4051,8 @@ function updateNoticeBadge(){
   const unread = isStudentRole() ? visibleNotices().filter(n=>!notifSeen.has(n.id)).length : 0;
   badge.hidden = !unread;
   badge.textContent = unread > 99 ? '99+' : String(unread);
+  const mb = document.getElementById('nbBadgeMobile');
+  if(mb){ mb.hidden = !unread; mb.textContent = badge.textContent; }
 }
 let notifSubToken = 0;
 async function subscribeNotifications(){
@@ -3651,7 +4099,7 @@ async function subscribeNotifications(){
       updateNoticeBadge(); renderNoticeBoardIfOpen();
     }, onError('pinned'));
     notifUnsub = ()=>{ u1(); u2(); };
-  } else {
+  } else if(!isRestrictedRole()){
     notifUnsub = onSnapshot(collection(db,'notifications'), (snap)=>{
       adminNotifications = snap.docs.map(d=>({id:d.id, ...d.data()}));
       adminNotifications.sort((a,b)=> tsMillis(b.updatedAt||b.sentAt||b.createdAt) - tsMillis(a.updatedAt||a.sentAt||a.createdAt));
@@ -3984,9 +4432,169 @@ async function assignMissingRegisterNumbers(){
   showToast(`Assigned ${done} register number${done===1?'':'s'}.${failed?` ${failed} failed — try again.`:''}${blocked?` ${blocked} skipped (school has no short code).`:''}`, failed>0 && !done);
 }
 
+/* Creates a Firebase login without signing the admin out: a temporary,
+   separate Firebase app makes the account and is always cleaned up. */
+async function createLoginAccount(email, pass){
+  const secondaryApp = initializeApp(firebaseConfig, 'Secondary'+Date.now());
+  try{
+    const secondaryAuth = getAuth(secondaryApp);
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
+    await signOut(secondaryAuth);
+    return cred.user.uid;
+  }finally{
+    deleteApp(secondaryApp).catch(()=>{});
+  }
+}
+function loginCreateErrorMessage(err, email){
+  if(String(err.code||'').includes('email-already-in-use')){
+    const inPortal = (entityCache.students||[]).some(s=>(s.email||'').toLowerCase()===String(email||'').toLowerCase());
+    return inPortal
+      ? 'This email already belongs to a student in the portal. Find them on the Students page instead.'
+      : 'This email is still reserved by an earlier account (for example, a student who was deleted). Remove it in Firebase console → Authentication → Users, then try again.';
+  }
+  return friendlyAuthError(err);
+}
+
+/* Students added before "Add Student" created logins have a record but no
+   login. The edit form checks for this and offers to create one, moving the
+   record (register number included) to the new login's id. */
+async function offerLoginSetup(studentId){
+  const box = document.getElementById('studentLoginSetup');
+  if(!box) return;
+  try{
+    const u = await getDoc(doc(db,'users',studentId));
+    if(u.exists() || !document.getElementById('studentLoginSetup')) return; // already has a login
+  }catch(err){ console.warn('Could not check student login', err); return; }
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="first-admin-note" style="margin-bottom:.7rem;"><i class="fa-solid fa-triangle-exclamation"></i>
+      <span>This student has no login yet, so they can't sign in. Check their login email and set a temporary password to create one.</span></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <input class="f-input" style="flex:1 1 200px;padding-left:.9rem;" type="email" id="slsEmail" placeholder="Login email" value="${escapeAttr(((entityCache.students||[]).find(x=>x.id===studentId)||{}).email||'')}">
+      <input class="f-input" style="flex:1 1 180px;padding-left:.9rem;" id="slsPass" placeholder="Temporary password (6+ characters)">
+      <button class="btn btn-primary" type="button" id="slsBtn"><i class="fa-solid fa-key"></i> Create Login</button>
+    </div>`;
+  document.getElementById('slsBtn').onclick = async ()=>{
+    const btn = document.getElementById('slsBtn');
+    const pass = document.getElementById('slsPass').value;
+    if(pass.length < 6){ showToast('Temporary password must be at least 6 characters.', true); return; }
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating…';
+    try{
+      const oldSnap = await getDoc(doc(db,'students',studentId));
+      if(!oldSnap.exists()) throw new Error('Student not found.');
+      const record = oldSnap.data();
+      const email = document.getElementById('slsEmail').value.trim();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Please enter a valid login email.');
+      record.email = email;
+      let uid;
+      try{ uid = await createLoginAccount(email, pass); }
+      catch(err){ showToast(loginCreateErrorMessage(err, email), true); return; }
+      const batch = writeBatch(db);
+      batch.set(doc(db,'users',uid), { name:record.name||'', email, role:'student', status:'active', createdAt:new Date().toISOString() });
+      batch.set(doc(db,'students',uid), record);
+      batch.delete(doc(db,'students',studentId));
+      await batch.commit();
+      showToast(`Login created for ${record.name||email}. They can now sign in with ${email}.`);
+      closeModal();
+    }catch(err){ showToast(err.message, true); }
+    finally{ const b = document.getElementById('slsBtn'); if(b){ b.disabled = false; b.innerHTML = '<i class="fa-solid fa-key"></i> Create Login'; } }
+  };
+}
+
+/* -------- Optional School login --------
+   A school can have one login. It sees its own Dashboard, its students
+   (view only) and the AI Learning / Resources sections for its subjects —
+   whatever Settings → Section Access allows for School logins. */
+function schoolLoginBoxHtml(school){
+  const wrap = (inner)=>`<div class="f-group" id="schoolLoginBox" style="border-top:1px solid var(--border);padding-top:.9rem;margin-top:.2rem;">${inner}</div>`;
+  if(school && school.loginUid){
+    const on = school.loginActive !== false;
+    return wrap(`
+      <label class="f-label">School Login</label>
+      <p style="font-size:.82rem;margin-bottom:.6rem;">${escapeHtml(school.loginEmail||'')} <span class="pill ${on?'pill-Active':'pill-Inactive'}">${on?'Active':'Disabled'}</span></p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button class="btn btn-ghost" type="button" id="slToggleBtn"><i class="fa-solid ${on?'fa-ban':'fa-circle-check'}"></i> ${on?'Disable login':'Enable login'}</button>
+        <button class="btn btn-ghost" type="button" id="slResetBtn"><i class="fa-solid fa-key"></i> Send reset link</button>
+        <button class="btn btn-danger" type="button" id="slRemoveBtn"><i class="fa-solid fa-trash"></i> Remove login</button>
+      </div>
+      ${schoolPackHtml(school.loginSectionAccessOverrides)}`);
+  }
+  return wrap(`
+    <label class="ms-opt"><input type="checkbox" id="slCreate"><strong>Create a login for this school (optional)</strong></label>
+    <div id="slFields" style="display:none;margin-top:.6rem;">
+      <div class="f-group"><label class="f-label">Login Email</label><input class="f-input" style="padding-left:.9rem;" type="email" id="slEmail" placeholder="e.g. office@school.com"></div>
+      <div class="f-group"><label class="f-label">Temporary Password</label><input class="f-input" style="padding-left:.9rem;" id="slPass" placeholder="At least 6 characters"></div>
+      <p style="font-size:.72rem;color:var(--text-3);">The school can then sign in to see its Dashboard, its students (view only) and learning materials for its subjects.</p>
+      ${schoolPackHtml(school && school.loginSectionAccessOverrides)}
+    </div>`);
+}
+function schoolPackHtml(overrides){
+  return `<div style="margin-top:.9rem;">
+      <label class="f-label">Section Access (this school's pack)</label>
+      <div class="ms-box" id="slAccess" style="max-height:280px;">${sectionOverridesRowsHtml(overrides, schoolPackSections())}</div>
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">Leave a section on “Plan default” to follow the School column in Settings → Section Access. Use Allow/Block to give this school its own pack.</p>
+    </div>`;
+}
+function wireSchoolLoginBox(school){
+  const cb = document.getElementById('slCreate');
+  if(cb){
+    cb.addEventListener('change', ()=>{ document.getElementById('slFields').style.display = cb.checked ? '' : 'none'; if(cb.checked) document.getElementById('slEmail').focus(); });
+    return;
+  }
+  if(!school || !school.loginUid) return;
+  document.getElementById('slToggleBtn').onclick = ()=>setSchoolLoginActive(school, school.loginActive === false);
+  document.getElementById('slRemoveBtn').onclick = ()=>removeSchoolLogin(school);
+  document.getElementById('slResetBtn').onclick = async ()=>{
+    if(!confirm(`Send a password reset link to ${school.loginEmail}?`)) return;
+    try{ await sendPasswordResetEmail(auth, school.loginEmail); showToast(`Password reset link sent to ${school.loginEmail}.`); }
+    catch(err){ showToast(friendlyAuthError(err), true); }
+  };
+}
+// Reads the "create a login" box. Returns null (no login wanted), an object, or false (invalid).
+function readSchoolLoginRequest(){
+  const cb = document.getElementById('slCreate');
+  if(!cb || !cb.checked) return null;
+  const email = document.getElementById('slEmail').value.trim();
+  const pass = document.getElementById('slPass').value;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast('Please enter a valid login email for the school.', true); return false; }
+  if(pass.length < 6){ showToast('The school login password must be at least 6 characters.', true); return false; }
+  return { email, pass };
+}
+async function createSchoolLogin(schoolId, schoolName, email, pass){
+  const uid = await createLoginAccount(email, pass);
+  const now = new Date().toISOString();
+  const batch = writeBatch(db);
+  batch.set(doc(db,'users',uid), { name: schoolName || 'School', email, role:'school', schoolId, status:'active', createdAt: now });
+  batch.update(doc(db,'schools',schoolId), { loginUid: uid, loginEmail: email, loginActive: true });
+  await batch.commit();
+}
+async function setSchoolLoginActive(school, active){
+  if(!confirm(active ? `Enable the login ${school.loginEmail}?` : `Disable the login ${school.loginEmail}? The school will be signed out straight away and can't sign in until you enable it again.`)) return;
+  try{
+    const batch = writeBatch(db);
+    batch.update(doc(db,'users',school.loginUid), { status: active ? 'active' : 'inactive' });
+    batch.update(doc(db,'schools',school.id), { loginActive: active });
+    await batch.commit();
+    showToast(active ? 'School login enabled.' : 'School login disabled.');
+    closeModal();
+  }catch(err){ showToast(err.message, true); }
+}
+async function removeSchoolLogin(school){
+  if(!confirm(`Remove the login ${school.loginEmail}? The school will lose access straight away.\n\nThe email stays reserved in Firebase. To reuse it for a new login, also delete it in Firebase console → Authentication → Users.`)) return;
+  try{
+    const batch = writeBatch(db);
+    batch.delete(doc(db,'users',school.loginUid));
+    batch.update(doc(db,'schools',school.id), { loginUid: deleteField(), loginEmail: deleteField(), loginActive: deleteField() });
+    await batch.commit();
+    showToast('School login removed.');
+    closeModal();
+  }catch(err){ showToast(err.message, true); }
+}
+
 async function saveEntity(key, editId){
   const cfg = ENTITIES[key];
   const data = {};
+  const newOnlyValues = {};
   for(const f of cfg.fields){
     if(f.type==='multiselect'){
       const box = document.getElementById('fld-'+f.k);
@@ -3998,6 +4606,15 @@ async function saveEntity(key, editId){
       continue;
     }
     if(f.type==='readonly') continue; // set by the portal, never typed in
+    if(f.newOnly){
+      if(!editId){
+        const pv = (document.getElementById('fld-'+f.k)||{}).value || '';
+        if(pv.length < 6){ showToast(`${f.l} must be at least 6 characters.`, true); return; }
+        newOnlyValues[f.k] = pv; // used to create the login, never saved in Firestore
+      }
+      continue;
+    }
+    if(f.lockOnEdit && editId) continue; // keep the existing login email
     const el = document.getElementById('fld-'+f.k);
     let v = el.value;
     if(f.type==='number') v = Number(v||0);
@@ -4006,7 +4623,13 @@ async function saveEntity(key, editId){
     data[f.k] = v;
   }
   if(cfg.fixedBoardClass){ data.board = BOARD_OPTIONS[0]; data.className = CLASS_OPTIONS[0]; }
+  let schoolLoginReq = null;
   if(key==='schools'){
+    schoolLoginReq = readSchoolLoginRequest();
+    if(schoolLoginReq === false) return;
+    const packBox = document.getElementById('slAccess');
+    const packVisible = packBox && packBox.offsetParent !== null; // hidden while "create a login" is unticked
+    if(packVisible) data.loginSectionAccessOverrides = readSectionOverrides(packBox);
     const problem = shortCodeProblem(data.shortCode, editId);
     if(problem){ showToast(problem, true); return; }
     const before = editId ? (entityCache.schools||[]).find(x=>x.id===editId) : null;
@@ -4019,11 +4642,28 @@ async function saveEntity(key, editId){
   try{
     let savedId = editId;
     if(key==='students' && !editId){
+      // Create the student's login first, then save their record under the
+      // login's id — so they can actually sign in.
+      const sc = (entityCache.schools||[]).find(x=>x.id===data.schoolId);
+      if(sc && !normalizeShortCode(sc.shortCode)){
+        showToast(`${sc.name||'This school'} has no short code yet, so a register number can't be given. Add one in Schools → edit the school, then try again.`, true);
+        return;
+      }
+      data.email = String(data.email||'').trim();
       data.createdAt = new Date().toISOString();
-      const ref = doc(collection(db, cfg.collection));
-      const reg = await createStudentWithRegisterNumber(ref, data);
-      savedId = ref.id;
-      showToast(`Student added. Register number: ${reg}`);
+      let uid;
+      try{ uid = await createLoginAccount(data.email, newOnlyValues.loginPassword); }
+      catch(err){ showToast(loginCreateErrorMessage(err, data.email), true); return; }
+      await setDoc(doc(db,'users',uid), { name:data.name, email:data.email, role:'student', status:'active', createdAt:data.createdAt });
+      savedId = uid;
+      try{
+        const reg = await createStudentWithRegisterNumber(doc(db,'students',uid), data);
+        showToast(`Student added with login. Register number: ${reg}`);
+      }catch(regErr){
+        console.warn('register number', regErr);
+        await setDoc(doc(db,'students',uid), data);
+        showToast(`Student added with login, but no register number yet: ${regErr.message}`, true);
+      }
     }else if(editId){
       await updateDoc(doc(db, cfg.collection, editId), data);
       let msg = `${cfg.singular} updated.`;
@@ -4042,6 +4682,15 @@ async function saveEntity(key, editId){
     }
     if(key==='subjects' && data.parentSubjectId){
       try{ await addSubSubjectToSchools(data.parentSubjectId, savedId); }catch(e){ console.warn('Could not add sub-subject to schools', e); }
+    }
+    if(key==='schools' && schoolLoginReq){
+      btn.textContent = 'Creating login...';
+      try{
+        await createSchoolLogin(savedId, data.name, schoolLoginReq.email, schoolLoginReq.pass);
+        showToast(`School login created. ${data.name||'The school'} can sign in with ${schoolLoginReq.email}.`);
+      }catch(err){
+        showToast(`School saved, but the login couldn't be created: ${loginCreateErrorMessage(err, schoolLoginReq.email)} Open the school to try again.`, true);
+      }
     }
     closeModal();
   }catch(err){ showToast(err.message, true); }
@@ -4090,11 +4739,14 @@ const AI_MAX_FILE_BYTES = 800 * 1024; // keep comfortably under Firestore's 1MB 
 const CONTENT_COLLECTION = 'materialContent';
 function contentDocRef(cfg, id){ return doc(db, CONTENT_COLLECTION, `${cfg.key}__${id}`); }
 // Saves one HTML material: details + contents written together (all-or-nothing).
+// Sections with a Show/Hide switch (Mock-Question Paper) store `hidden` on both
+// the paper and its contents, so the security rules can refuse hidden ones.
+function visibilityFields(cfg, hidden){ return cfg.visibilityToggle ? { hidden: !!hidden } : {}; }
 async function saveHtmlMaterial(cfg, meta, htmlContent){
   const ref = doc(collection(db, cfg.collection));
   const batch = writeBatch(db);
-  batch.set(ref, { ...meta, contentV2: true });
-  batch.set(contentDocRef(cfg, ref.id), { module: cfg.key, subjectId: meta.subjectId || '', htmlContent });
+  batch.set(ref, { ...meta, contentV2: true, ...(cfg.visibilityToggle ? { hidden: !!meta.hidden, visibilityV1: true } : {}) });
+  batch.set(contentDocRef(cfg, ref.id), { module: cfg.key, subjectId: meta.subjectId || '', htmlContent, ...visibilityFields(cfg, meta.hidden) });
   await batch.commit();
   return ref.id;
 }
@@ -4113,10 +4765,10 @@ async function migrateInlineContent(cfg){
     try{
       const batch = writeBatch(db);
       if(typeof r.htmlContent==='string'){
-        batch.set(contentDocRef(cfg, r.id), { module: cfg.key, subjectId: r.subjectId || '', htmlContent: r.htmlContent });
+        batch.set(contentDocRef(cfg, r.id), { module: cfg.key, subjectId: r.subjectId || '', htmlContent: r.htmlContent, ...visibilityFields(cfg, r.hidden) });
         batch.update(doc(db, cfg.collection, r.id), { htmlContent: deleteField(), contentV2: true });
       } else {
-        batch.set(contentDocRef(cfg, r.id), { module: cfg.key, subjectId: r.subjectId || '' }, { merge: true });
+        batch.set(contentDocRef(cfg, r.id), { module: cfg.key, subjectId: r.subjectId || '', ...visibilityFields(cfg, r.hidden) }, { merge: true });
         batch.update(doc(db, cfg.collection, r.id), { contentV2: true });
       }
       await batch.commit();
@@ -4126,6 +4778,27 @@ async function migrateInlineContent(cfg){
   migratingModules.delete(cfg.key);
   if(moved) console.info(`Updated ${moved} ${cfg.label} file(s) to the secure content format.`);
 }
+// One-time: give every older mock paper an explicit hidden true/false on the
+// paper AND its contents (students' queries ask only for hidden == false).
+const visibilityMigrating = new Set();
+async function migrateVisibility(cfg){
+  if(!cfg.visibilityToggle || isRestrictedRole() || visibilityMigrating.has(cfg.key)) return;
+  const todo = cfg.rows.filter(r=>!r.visibilityV1);
+  if(!todo.length) return;
+  visibilityMigrating.add(cfg.key);
+  try{
+    for(let i=0;i<todo.length;i+=200){
+      const batch = writeBatch(db);
+      todo.slice(i,i+200).forEach(r=>{
+        batch.update(doc(db, cfg.collection, r.id), { hidden: !!r.hidden, visibilityV1: true });
+        batch.set(contentDocRef(cfg, r.id), { module: cfg.key, subjectId: r.subjectId || '', hidden: !!r.hidden }, { merge: true });
+      });
+      await batch.commit();
+    }
+    console.info(`Set visibility on ${todo.length} ${cfg.label} file(s).`);
+  }catch(err){ console.warn('Could not set visibility for', cfg.key, err); }
+  finally{ visibilityMigrating.delete(cfg.key); }
+}
 
 /* ---- Which materials each device downloads ----
    Admins listen to the whole collection. Students listen only to the subjects
@@ -4134,7 +4807,7 @@ async function migrateInlineContent(cfg){
 function resourceWantedSubjects(cfg){
   if(!isRestrictedRole()) return null; // null = everything (admin)
   if(!sectionAllowed(cfg.key)) return [];
-  const assigned = [...assignedSubjectSet()].sort();
+  const assigned = [...assignedSubjectSet()].filter(subjectActive).sort();
   if(cfg.loadAllSubjects) return assigned; // search needs everything the student can see
   // Otherwise only the subjects this student has actually opened in this
   // section — nothing is downloaded until they tap into a subject.
@@ -4144,6 +4817,13 @@ function resourceWantedSubjects(cfg){
 // Students only see subjects that actually have materials in a section. Rather
 // than downloading every subject's items to find out, ask Firestore for a count
 // per subject (about 1 read each), once per sign-in.
+// What a student or school login asks for in one subject: hidden mock papers
+// are left out of the query itself (the security rules require this).
+function restrictedSubjectQuery(cfg, subjectId){
+  const filters = [where('subjectId','==',subjectId)];
+  if(cfg.visibilityToggle && isRestrictedRole()) filters.push(where('hidden','==',false));
+  return query(collection(db, cfg.collection), ...filters);
+}
 async function fetchStudentSubjectCounts(cfg, subjectIds){
   if(!cfg.subjectCounts) cfg.subjectCounts = {};
   if(!cfg.countPending) cfg.countPending = new Set();
@@ -4152,7 +4832,7 @@ async function fetchStudentSubjectCounts(cfg, subjectIds){
   todo.forEach(id=>cfg.countPending.add(id));
   await Promise.all(todo.map(async id=>{
     try{
-      const snap = await getCountFromServer(query(collection(db, cfg.collection), where('subjectId','==',id)));
+      const snap = await getCountFromServer(restrictedSubjectQuery(cfg, id));
       cfg.subjectCounts[id] = snap.data().count;
     }catch(err){
       console.warn('count', cfg.key, id, err);
@@ -4196,6 +4876,7 @@ function rebuildResourceRows(cfg){
   cfg.rows = rows;
   renderResourceBrowser(cfg);
   if(cfg.itemType==='html') migrateInlineContent(cfg);
+  migrateVisibility(cfg);
   if(cfg.key==='lessons') refreshDependentViews(); // keeps the dashboard's "Active Lessons" stat in sync
   if(PROGRESS_SECTIONS.includes(cfg.key)) scheduleProgressIndexWrite();
   // If search results are open, refresh them as more materials arrive.
@@ -4220,7 +4901,7 @@ function syncResourceSubscriptions(cfg){
   });
   want.forEach(k=>{
     if(cfg.subsByKey[k]) return;
-    const ref = k==='*' ? collection(db, cfg.collection) : query(collection(db, cfg.collection), where('subjectId','==',k));
+    const ref = k==='*' ? collection(db, cfg.collection) : restrictedSubjectQuery(cfg, k);
     cfg.subsByKey[k] = onSnapshot(ref, (snap)=>{
       if(!cfg.subsByKey[k]) return; // stopped meanwhile
       cfg.rowsByKey[k] = snap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -4357,6 +5038,8 @@ function renderResourceBreadcrumb(cfg){
 }
 
 function renderResourceBrowser(cfg){
+  ensureBackGuardSoon();
+  if(resourcePageActive(cfg)) syncBottomNavActive();
   // Board and Class are fixed (State / Class 10) — skip those two levels.
   if(!cfg.browsePath.board) cfg.browsePath.board = BOARD_OPTIONS[0];
   if(!cfg.browsePath.className) cfg.browsePath.className = CLASS_OPTIONS[0];
@@ -4406,9 +5089,8 @@ function renderResSubjectLevel(cfg, grid){
       if(resourceSubjectLoaded(cfg, s.id)) count = visibleRows(cfg).filter(r=>r.subjectId===s.id).length;
       else{
         count = cfg.subjectCounts[s.id];
-        // Mock papers can be hidden from students, so the raw count may include
-        // hidden ones — show "Tap to open" instead of a possibly wrong number.
-        if(count && cfg.visibilityToggle) count = null;
+        // Same if some of this subject's chapters are Inactive.
+        if(count && Object.values(inactiveChapterMap()).includes(s.id)) count = null;
       }
       return { s, count };
     }).filter(x=>x.count!==0);
@@ -5005,7 +5687,21 @@ async function runBulkUpload(){
 }
 
 let viewerRequestSeq = 0; // ignores a slow load if the person has already opened a different file
+// The viewer shows uploaded HTML as its own page, so it gets the same
+// no-zoom rules and fits the phone's width.
+const NO_ZOOM_HEAD = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">'
+  + '<style>html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%;max-width:100%;}img,video,iframe,table{max-width:100%;}</style>'
+  + '<script>(function(){var b=function(e){e.preventDefault();};["gesturestart","gesturechange","gestureend"].forEach(function(t){document.addEventListener(t,b,{passive:false});});'
+  + 'document.addEventListener("touchmove",function(e){if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});})();<\/script>';
+function noZoomContent(html){
+  html = String(html || '');
+  if(/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, m=>m + NO_ZOOM_HEAD);
+  if(/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, m=>m + '<head>' + NO_ZOOM_HEAD + '</head>');
+  return NO_ZOOM_HEAD + html;
+}
 async function viewResource(moduleKey, id){
+  ensureBackGuardSoon();
+  setTimeout(syncBottomNavActive, 0);
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
@@ -5019,13 +5715,13 @@ async function viewResource(moduleKey, id){
   const msg = (t)=>`<p style="font-family:sans-serif;padding:1rem;color:#888;">${t}</p>`;
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('main').scrollTo(0,0);
-  if(typeof row.htmlContent==='string'){ frame.srcdoc = row.htmlContent || msg('No content.'); return; } // older file not moved yet
+  if(typeof row.htmlContent==='string'){ frame.srcdoc = row.htmlContent ? noZoomContent(row.htmlContent) : msg('No content.'); return; } // older file not moved yet
   const seq = ++viewerRequestSeq;
   frame.srcdoc = msg('Loading…');
   try{
     const snap = await getDoc(contentDocRef(cfg, id));
     if(seq !== viewerRequestSeq) return;
-    frame.srcdoc = (snap.exists() && snap.data().htmlContent) || msg('No content.');
+    frame.srcdoc = (snap.exists() && snap.data().htmlContent) ? noZoomContent(snap.data().htmlContent) : msg('No content.');
   }catch(err){
     if(seq !== viewerRequestSeq) return;
     console.warn('Could not load content', err);
@@ -5074,6 +5770,8 @@ function toEmbeddableVideoUrl(url){
   return /^https?:\/\//i.test(url) ? url : ''; // only real web links (never javascript: etc.)
 }
 function viewLessonVideo(moduleKey, id){
+  ensureBackGuardSoon();
+  setTimeout(syncBottomNavActive, 0);
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
@@ -5113,6 +5811,8 @@ function formatAudioTime(sec){
 }
 let audioPlayerWired = false;
 function viewAudioLesson(moduleKey, id){
+  ensureBackGuardSoon();
+  setTimeout(syncBottomNavActive, 0);
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
@@ -5202,7 +5902,7 @@ window.replaceResourceFile = function(moduleKey, id){
     try{
       const htmlContent = await file.text();
       const batch = writeBatch(db);
-      batch.set(contentDocRef(cfg, id), { module: cfg.key, subjectId: row.subjectId || '', htmlContent });
+      batch.set(contentDocRef(cfg, id), { module: cfg.key, subjectId: row.subjectId || '', htmlContent, ...visibilityFields(cfg, row.hidden) });
       batch.update(doc(db, cfg.collection, id), { updatedAt: new Date().toISOString(), contentV2: true });
       await batch.commit();
       showToast(`"${title}" updated.`);
@@ -5241,8 +5941,11 @@ window.toggleResourceVisibility = async function(moduleKey, id){
   if(!row) return;
   const nowHidden = !row.hidden;
   try{
-    await updateDoc(doc(db, cfg.collection, id), { hidden: nowHidden });
-    showToast(nowHidden ? 'Hidden from students.' : 'Now visible to students.');
+    const batch = writeBatch(db);
+    batch.update(doc(db, cfg.collection, id), { hidden: nowHidden, visibilityV1: true });
+    if(cfg.itemType==='html') batch.set(contentDocRef(cfg, id), { module: cfg.key, subjectId: row.subjectId || '', hidden: nowHidden }, { merge: true });
+    await batch.commit();
+    showToast(nowHidden ? 'Hidden from students and schools.' : 'Now visible to students and schools.');
   }catch(err){ showToast(err.message, true); }
 };
 
@@ -5324,16 +6027,7 @@ document.getElementById('createUserForm').addEventListener('submit', async e=>{
         return; // finally{} below re-enables the button
       }
     }
-    const secondaryApp = initializeApp(firebaseConfig, 'Secondary'+Date.now());
-    let uid;
-    try{
-      const secondaryAuth = getAuth(secondaryApp);
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
-      uid = cred.user.uid;
-      await signOut(secondaryAuth);
-    }finally{
-      deleteApp(secondaryApp).catch(()=>{});
-    }
+    const uid = await createLoginAccount(email, pass);
 
     await setDoc(doc(db,'users',uid), { name, email, role, status:'active', createdAt:new Date().toISOString() });
     if(role==='admin'){
@@ -5363,14 +6057,7 @@ document.getElementById('createUserForm').addEventListener('submit', async e=>{
     document.getElementById('cuSectionOverrides').innerHTML = sectionOverridesRowsHtml({});
     renderCuSchoolOptions();
   }catch(err){
-    if(String(err.code||'').includes('email-already-in-use')){
-      const inPortal = [...(entityCache.students||[])].some(s=>(s.email||'').toLowerCase()===email.toLowerCase());
-      showToast(inPortal
-        ? 'This email already belongs to a student in the portal. Find them on the Students page instead.'
-        : 'This email is still reserved by an earlier account (for example, a student who was deleted). Remove it in Firebase console → Authentication → Users, then try again.', true);
-    } else {
-      showToast(friendlyAuthError(err), true);
-    }
+    showToast(loginCreateErrorMessage(err, email), true);
   }finally{
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Account';
   }
@@ -5380,12 +6067,16 @@ document.getElementById('createUserForm').addEventListener('submit', async e=>{
    DASHBOARD
    ================================================================= */
 const STAT_CARDS = [
-  {key:'schools', label:'Total Schools', icon:'fa-school', color:'blue', adminOnly:true},
-  {key:'students', label:'Total Students', icon:'fa-users', color:'purple', adminOnly:true}
+  {key:'schools', label:'Total Schools', icon:'fa-school', color:'blue', roles:['admin']},
+  {key:'students', label:'Total Students', schoolLabel:'Students enrolled from your school', icon:'fa-users', color:'purple', roles:['admin','school']},
+  {key:'subjects', label:'Subjects', icon:'fa-book', color:'green', roles:['school']}
 ];
 
 function initDashboard(){
-  const cards = STAT_CARDS.filter(s=> !(s.adminOnly && isRestrictedRole()) );
+  const role = isSchoolRole() ? 'school' : isStudentRole() ? 'student' : 'admin';
+  const cards = STAT_CARDS
+    .filter(s=> s.roles.includes(role) && !(role==='school' && s.needs && !sectionAllowed(s.needs)))
+    .map(s=> ({ ...s, label: (role==='school' && s.schoolLabel) || s.label }));
   document.getElementById('statGrid').innerHTML = cards.map(s=>`
     <div class="stat-card stat-card-hero">
       <div class="stat-icon" style="background:var(--${s.color}-bg);color:var(--${s.color});"><i class="fa-solid ${s.icon}"></i></div>
@@ -5394,10 +6085,41 @@ function initDashboard(){
     </div>`).join('');
 }
 
+// School logins see their student count even when the Students page is
+// switched off for them: then it comes from the count kept on their school record.
+function studentCountForDashboard(){
+  if(!isSchoolRole() || sectionAllowed('students')) return visibleStudentRows().length;
+  const sc = (entityCache.schools||[])[0];
+  return (sc && typeof sc.studentCount === 'number') ? sc.studentCount : '—';
+}
+// Admins: keep each school's studentCount up to date (written only when it changed).
+let schoolCountsTimer = null;
+function scheduleSchoolCountsWrite(){
+  if(isRestrictedRole() || !currentUser) return;
+  clearTimeout(schoolCountsTimer);
+  schoolCountsTimer = setTimeout(writeSchoolCounts, 2000);
+}
+async function writeSchoolCounts(){
+  if(isRestrictedRole() || !entityCache.students || !entityCache.schools) return;
+  const counts = {};
+  entityCache.students.forEach(st=>{ if(st.schoolId) counts[st.schoolId] = (counts[st.schoolId]||0) + 1; });
+  const changed = entityCache.schools.filter(sc=>sc.studentCount !== (counts[sc.id]||0));
+  if(!changed.length) return;
+  try{
+    for(let i=0;i<changed.length;i+=400){
+      const batch = writeBatch(db);
+      changed.slice(i,i+400).forEach(sc=>batch.update(doc(db,'schools',sc.id), { studentCount: counts[sc.id]||0 }));
+      await batch.commit();
+    }
+  }catch(err){ console.warn('Could not update school student counts', err); }
+}
+
 function refreshDependentViews(){
   // stat counts
   document.getElementById('stat-schools') && (document.getElementById('stat-schools').textContent = (entityCache.schools||[]).length);
-  document.getElementById('stat-students') && (document.getElementById('stat-students').textContent = visibleStudentRows().length);
+  const stuStat = document.getElementById('stat-students');
+  if(stuStat) stuStat.textContent = studentCountForDashboard();
+  document.getElementById('stat-subjects') && (document.getElementById('stat-subjects').textContent = [...assignedSubjectSet()].filter(subjectActive).length);
   refreshOpenModalFilters();
 }
 // Re-applies any Board/Class-filtered fields (Assign Subjects, etc.) on
@@ -5456,12 +6178,17 @@ function buildProgressIndex(){
     const byKey = RESOURCE_MODULES[k].rowsByKey || {};
     if(!Object.prototype.hasOwnProperty.call(byKey, '*')) return null;
   }
+  if(!entityCache.chapters || !entityCache.subjects) return null; // need statuses
   const chapById = new Map((entityCache.chapters||[]).map(c=>[c.id, c]));
+  const inactiveChapters = {};
+  (entityCache.chapters||[]).forEach(c=>{ if(c.status==='Inactive') inactiveChapters[c.id] = c.subjectId || ''; });
+  const isSubjectInactive = sid=>{ const sj = subjectById(sid); if(!sj) return false; const par = subjectParent(sj); return sj.status==='Inactive' || !!(par && par.status==='Inactive'); };
   const sections = {}, chapters = {}, subjects = {};
   PROGRESS_SECTIONS.forEach(k=>{
     const bySubject = {};
     RESOURCE_MODULES[k].rows.forEach(r=>{
       if(!r.subjectId || !r.chapterId) return;
+      if(inactiveChapters[r.chapterId]!==undefined || isSubjectInactive(r.subjectId)) return; // not counted while Inactive
       if(!bySubject[r.subjectId]) bySubject[r.subjectId] = new Set();
       bySubject[r.subjectId].add(r.chapterId);
       const ch = chapById.get(r.chapterId);
@@ -5471,7 +6198,7 @@ function buildProgressIndex(){
     sections[k] = {};
     Object.keys(bySubject).sort().forEach(sid=>{ sections[k][sid] = [...bySubject[sid]].sort(); });
   });
-  return { v:1, sections, chapters, subjects };
+  return { v:2, sections, chapters, subjects, inactiveChapters };
 }
 function scheduleProgressIndexWrite(){
   if(isRestrictedRole() || !currentUser) return;
@@ -5496,6 +6223,14 @@ async function writeProgressIndex(){
 function startProgressTracking(){
   stopProgressTracking();
   myProgress = {}; myProgressLoaded = false; progressIndexLoaded = false; progressError = null;
+  if(isSchoolRole()){
+    // School logins don't track progress; they only need the list of Inactive chapters.
+    unsubProgressIndex = onSnapshot(progressIndexRef(), (snap)=>{
+      progressIndex = snap.exists() ? snap.data() : EMPTY_PROGRESS_INDEX;
+      progressIndexLoaded = true; refreshProgressViews();
+    }, (err)=>console.warn('progress index', err));
+    return;
+  }
   if(!isStudentRole()) return;
   unsubMyProgress = onSnapshot(doc(db, 'progress', currentUser.uid), (snap)=>{
     myProgress = (snap.exists() && snap.data().completed) || {};
@@ -5514,7 +6249,7 @@ function stopProgressTracking(){
 function refreshProgressViews(){
   const pg = document.getElementById('page-myProgress');
   if(pg && pg.classList.contains('active')) renderMyProgress();
-  PROGRESS_SECTIONS.forEach(k=>{ const cfg = RESOURCE_MODULES[k]; if(cfg.live && resourcePageActive(cfg)) renderResourceBrowser(cfg); });
+  Object.values(RESOURCE_MODULES).forEach(cfg=>{ if(cfg.live && resourcePageActive(cfg)) renderResourceBrowser(cfg); });
 }
 async function setChapterCompleted(section, subjectId, chapterId, done){
   if(!isStudentRole() || !currentUser) return;
@@ -5742,6 +6477,7 @@ function subjectRowsHtml(subjects){
     </button>`).join('');
 }
 function renderMyProgress(){
+  ensureBackGuardSoon();
   const page = document.getElementById('page-myProgress');
   if(!page || !isStudentRole()) return;
   const simpleHead = `<div class="page-head"><div><h2>My Progress</h2></div></div>`;
@@ -5890,6 +6626,7 @@ function miniBar(d){
   return `<span class="pg-mini"><span class="pg-bar"><span style="width:${pct(d.done,d.total)}%"></span></span>${pct(d.done,d.total)}%</span>`;
 }
 function renderStudentProgressPage(){
+  ensureBackGuardSoon();
   const page = document.getElementById('page-studentProgress');
   if(!page || isRestrictedRole()) return;
   if(!page.classList.contains('active')) return;
@@ -5922,10 +6659,10 @@ function renderStudentProgressPage(){
       <input class="f-input" id="pgSearch" placeholder="Search student name or email" value="${escapeAttr(adminProgressFilter.q)}" autocomplete="off">
       <span id="pgResultCount" style="align-self:center;font-size:.8rem;color:var(--text-2);"></span>
     </div>
-    <div class="table-panel"><table id="adminProgressTable">
+    <div class="table-panel"><div style="overflow-x:auto;"><table id="adminProgressTable">
       <thead><tr><th>Student</th><th>School</th><th>Overall</th>${PROGRESS_SECTIONS.map(k=>`<th>${PROGRESS_SHORT[k]}</th>`).join('')}<th>Last completed</th></tr></thead>
       <tbody></tbody>
-    </table></div>`;
+    </table></div></div>`;
   wire();
   const schoolName = new Map(schools.map(sc=>[sc.id, sc.name||'']));
   const fillRows = ()=>{
