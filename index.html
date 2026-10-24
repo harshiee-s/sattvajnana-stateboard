@@ -549,6 +549,23 @@ input.ap-volume::-moz-range-track{height:4px;border-radius:99px;background:rgba(
 .file-card .fc-sub{position:relative;font-size:.72rem;color:var(--text-2);margin-top:1px;}
 .file-card .fc-actions{position:relative;margin-left:auto;display:flex;gap:.3rem;}
 .file-card .fc-check{position:relative;width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:var(--purple);}
+/* ===== Full screen (and landscape on phones) ===== */
+.fs-exit-btn{display:none;position:absolute;top:.6rem;right:.6rem;z-index:5;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:99px;
+  background:rgba(11,17,32,.78);color:#fff;font-size:.78rem;font-weight:700;border:1px solid rgba(255,255,255,.2);box-shadow:0 6px 16px -6px rgba(0,0,0,.5);}
+.fs-rotated .fs-exit-btn,#aiViewerPanel:fullscreen .fs-exit-btn,#lessonViewerPanel:fullscreen .fs-exit-btn{display:inline-flex;}
+#lessonViewerPanel:fullscreen,#lessonViewerPanel:-webkit-full-screen{padding:0;border:none;border-radius:0;background:#000;}
+#lessonViewerPanel:fullscreen .lesson-video-wrap,#lessonViewerPanel:-webkit-full-screen .lesson-video-wrap{height:100vh !important;border:none;border-radius:0;}
+/* iPhone (no fullscreen / screen lock for websites): the panel covers the screen
+   and is turned sideways while the phone is held upright. */
+body.fs-rotated-open{overflow:hidden;}
+.fs-rotated{position:fixed !important;inset:0;z-index:3000;margin:0 !important;padding:0 !important;border:none !important;border-radius:0 !important;
+  width:100vw;height:100vh;height:100dvh;background:#fff !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important;}
+#lessonViewerPanel.fs-rotated{background:#000 !important;}
+.fs-rotated iframe.ai-viewer-frame{width:100%;height:100% !important;border:none;border-radius:0;}
+.fs-rotated .lesson-video-wrap{height:100% !important;border:none;border-radius:0;}
+@media (orientation:portrait){
+  .fs-rotated{top:0;left:0;right:auto;bottom:auto;width:100vh;width:100dvh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%);}
+}
 #aiViewerPanel:fullscreen,#aiViewerPanel:-webkit-full-screen{padding:0;border:none;border-radius:0;background:#fff;display:flex;}
 #aiViewerPanel:fullscreen #aiViewerFrame,#aiViewerPanel:-webkit-full-screen #aiViewerFrame{height:100vh !important;border:none;border-radius:0;}
 .cc-done{position:absolute;top:.85rem;right:.85rem;display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:700;color:var(--green);background:var(--green-bg);padding:.2rem .5rem;border-radius:99px;}
@@ -1158,6 +1175,7 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
         <button class="btn btn-ghost" id="aiFullscreenBtn" onclick="toggleFullscreenPanel('aiViewerPanel')"><i class="fa-solid fa-expand"></i> Fullscreen</button>
       </div>
       <div class="table-panel" id="aiViewerPanel">
+        <button type="button" class="fs-exit-btn" onclick="exitFullscreenMode()" aria-label="Exit full screen"><i class="fa-solid fa-compress"></i> Exit</button>
         <iframe id="aiViewerFrame" title="Learning material" class="ai-viewer-frame" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe>
       </div>
     </section>
@@ -1170,8 +1188,10 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
           <h2 id="lessonViewerTitle">Viewing</h2>
           <p id="lessonViewerMeta"></p>
         </div>
+        <button class="btn btn-ghost" id="lessonFullscreenBtn" onclick="toggleFullscreenPanel('lessonViewerPanel')"><i class="fa-solid fa-expand"></i> Fullscreen</button>
       </div>
       <div class="table-panel" id="lessonViewerPanel">
+        <button type="button" class="fs-exit-btn" onclick="exitFullscreenMode()" aria-label="Exit full screen"><i class="fa-solid fa-compress"></i> Exit</button>
         <div class="lesson-video-wrap" id="lessonVideoWrap">
           <iframe id="lessonViewerFrame" title="Lesson video" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
         </div>
@@ -2336,6 +2356,7 @@ function portalAtRoot(){
   if(document.getElementById('modalOverlay').classList.contains('show')) return false;
   if(document.getElementById('sidebar').classList.contains('open')) return false;
   const sw = document.getElementById('tbSearchWrap'); if(sw && sw.classList.contains('mobile-open')) return false;
+  if(inFullscreenMode()) return false;
   const key = activePageKey();
   if(key !== backHomePage()) return false;
   if(RESOURCE_MODULES[key] && RESOURCE_MODULES[key].browsePath && RESOURCE_MODULES[key].browsePath.subjectId) return false;
@@ -2367,10 +2388,7 @@ function goUpOneLevel(){
   if(sb.classList.contains('open')){ sb.classList.remove('open'); return true; }
   const sw = document.getElementById('tbSearchWrap');
   if(sw && sw.classList.contains('mobile-open')){ closeMobileSearch(); return true; }
-  if(document.fullscreenElement || document.webkitFullscreenElement){
-    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
-    return true;
-  }
+  if(inFullscreenMode()){ exitFullscreenMode(); return true; }
   const key = activePageKey();
   if(key==='resourceViewer'){ document.getElementById('aiViewerBackBtn').click(); return true; }
   if(key==='lessonViewer'){ goToPage('lessons'); return true; }
@@ -2514,9 +2532,7 @@ window.goToPage = function(key){
   if(!isRestrictedRole() && key==='myProgress') key = 'studentProgress';
   if(!isRestrictedRole() && key==='noticeBoard') key = 'notifications';
   if(!sectionAllowed(key)) return; // admin hasn't granted this role access to this section
-  if(document.fullscreenElement || document.webkitFullscreenElement){
-    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
-  }
+  if(inFullscreenMode()) exitFullscreenMode();
   stopMediaPlayback();
   document.querySelectorAll('.sb-item[data-page]').forEach(el=>el.classList.toggle('active', el.dataset.page===key));
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
@@ -5823,18 +5839,64 @@ async function viewResource(moduleKey, id){
   }
 }
 // Generic fullscreen toggle, reused by both the resource viewer and the lesson video viewer.
-window.toggleFullscreenPanel = function(panelId){
+// Phones and small tablets (touch screens) get landscape full screen; computers don't.
+function isPhoneLike(){
+  const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+  const small = Math.min(screen.width || innerWidth, screen.height || innerHeight) <= 820;
+  return coarse && small;
+}
+// A browser request that never answers shouldn't leave the button doing nothing.
+function withTimeout(promise, ms){
+  return Promise.race([Promise.resolve(promise), new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), ms))]);
+}
+function nativeFullscreenElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function rotatedPanel(){ return document.querySelector('.fs-rotated'); }
+function inFullscreenMode(){ return !!(nativeFullscreenElement() || rotatedPanel()); }
+function enterRotatedMode(panel){
+  panel.classList.add('fs-rotated');
+  document.body.classList.add('fs-rotated-open');
+  updateFullscreenBtns();
+}
+window.exitFullscreenMode = function(){
+  const rp = rotatedPanel();
+  if(rp){ rp.classList.remove('fs-rotated'); document.body.classList.remove('fs-rotated-open'); }
+  try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+  if(nativeFullscreenElement()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+  updateFullscreenBtns();
+};
+window.toggleFullscreenPanel = async function(panelId){
   const panel = document.getElementById(panelId);
-  const isFull = document.fullscreenElement || document.webkitFullscreenElement;
-  if(!isFull){
+  if(inFullscreenMode()){ exitFullscreenMode(); return; }
+  if(!isPhoneLike()){
+    // Computers: normal full screen, no rotation.
     (panel.requestFullscreen || panel.webkitRequestFullscreen)?.call(panel);
-  } else {
-    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    return;
   }
+  // Phones: full screen and turn to landscape where the browser allows it (Android Chrome)…
+  const req = panel.requestFullscreen || panel.webkitRequestFullscreen;
+  if(req){
+    try{
+      await withTimeout(req.call(panel, { navigationUI:'hide' }), 1500);
+      if(screen.orientation && screen.orientation.lock){
+        await withTimeout(screen.orientation.lock('landscape'), 1500);
+        updateFullscreenBtns();
+        return;
+      }
+    }catch(e){ /* fall through to the rotated view */ }
+    if(nativeFullscreenElement()){
+      // Full screen worked but the screen direction couldn't be locked: if the
+      // phone is upright, use the rotated view instead so it still shows sideways.
+      if(innerWidth > innerHeight){ updateFullscreenBtns(); return; }
+      try{ await (document.exitFullscreen || document.webkitExitFullscreen).call(document); }catch(e){}
+    }
+  }
+  // …otherwise (iPhone) cover the screen and turn the content sideways.
+  enterRotatedMode(panel);
 };
 function updateFullscreenBtns(){
-  const isFull = document.fullscreenElement || document.webkitFullscreenElement;
-  ['aiFullscreenBtn'].forEach(id=>{
+  const isFull = inFullscreenMode();
+  if(!nativeFullscreenElement()){ try{ if(screen.orientation && screen.orientation.unlock && !rotatedPanel()) screen.orientation.unlock(); }catch(e){} }
+  ['aiFullscreenBtn','lessonFullscreenBtn'].forEach(id=>{
     const btn = document.getElementById(id);
     if(!btn) return;
     btn.innerHTML = isFull ? '<i class="fa-solid fa-compress"></i> Exit Fullscreen' : '<i class="fa-solid fa-expand"></i> Fullscreen';
@@ -5864,6 +5926,7 @@ function toEmbeddableVideoUrl(url){
   return /^https?:\/\//i.test(url) ? url : ''; // only real web links (never javascript: etc.)
 }
 function viewLessonVideo(moduleKey, id){
+  if(inFullscreenMode()) exitFullscreenMode();
   ensureBackGuardSoon();
   setTimeout(syncBottomNavActive, 0);
   const cfg = RESOURCE_MODULES[moduleKey];
