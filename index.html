@@ -1023,6 +1023,7 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
       <div class="sb-item" data-page="createUser" data-admin-only><i class="fa-solid fa-user-plus"></i> Create User</div>
       <div class="sb-item" data-page="notifications" data-admin-only><i class="fa-solid fa-bell"></i> Notifications</div>
       <div class="sb-item" data-page="studentProgress" data-admin-only><i class="fa-solid fa-chart-line"></i> Student Progress</div>
+      <div class="sb-item" data-page="usageReports" data-admin-only><i class="fa-solid fa-chart-pie"></i> Usage Reports</div>
 
       <div class="sb-group-label" data-admin-only>Academic Management</div>
       <div class="sb-item" data-page="subjects" data-admin-only><i class="fa-solid fa-book"></i> Subjects</div>
@@ -1193,7 +1194,7 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
       <div class="table-panel" id="lessonViewerPanel">
         <button type="button" class="fs-exit-btn" onclick="exitFullscreenMode()" aria-label="Exit full screen"><i class="fa-solid fa-compress"></i> Exit</button>
         <div class="lesson-video-wrap" id="lessonVideoWrap">
-          <iframe id="lessonViewerFrame" title="Lesson video" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
+          <iframe id="lessonViewerFrame" title="Lesson video" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>
         </div>
       </div>
     </section>
@@ -1249,6 +1250,7 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
     <section class="page" id="page-myProgress"></section>
     <section class="page" id="page-noticeBoard"></section>
     <section class="page" id="page-studentProgress"></section>
+    <section class="page" id="page-usageReports"></section>
 
     <section class="page" id="page-createUser">
       <div class="page-head"><div><h2>Create User</h2><p>Add a new Student or Admin account with portal login access.</p></div></div>
@@ -1362,7 +1364,7 @@ import {
 import {
   getFirestore, initializeFirestore, runTransaction, persistentLocalCache, persistentMultipleTabManager, terminate, clearIndexedDbPersistence,
   collection, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-  doc, query, where, onSnapshot, getCountFromServer, getDocs, serverTimestamp, writeBatch, deleteField, Timestamp
+  doc, query, where, onSnapshot, getCountFromServer, getDocs, serverTimestamp, writeBatch, deleteField, Timestamp, increment, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ---- Theme toggle wiring (logo injection + light/dark toggle button) ----
@@ -1431,7 +1433,7 @@ const app = initializeApp(firebaseConfig);
    "reCAPTCHA Enterprise", copy the site key here, and set the token
    time-to-live to 7 days (keeps you inside the free reCAPTCHA allowance).
    Then watch App Check → Metrics for a week before pressing "Enforce". */
-const APP_CHECK_SITE_KEY = ''; // ← paste your reCAPTCHA Enterprise site key
+const APP_CHECK_SITE_KEY = '6LcTZv4tAAAAAEmI6PJaF3T7dsLnjLuwqghL88kS'; // reCAPTCHA Enterprise site key (public by design)
 if(APP_CHECK_SITE_KEY){
   try{
     // Opened from your own computer (file:// or localhost)? Use a debug
@@ -1578,6 +1580,7 @@ onAuthStateChanged(auth, async (user)=>{
         enterApp();
         subscribeOwnProfile('students', user.uid);
         claimStudentSession(user);
+        recordStudentActive();
         return;
       }
       if(snap.exists() && snap.data().role === 'school'){
@@ -2068,7 +2071,7 @@ function subscribeSectionAccess(){
 
 // Academic Management (Subjects / Chapters / Topics) is admin-only — students
 // never see these pages, whatever Section Access says.
-const ADMIN_ONLY_SECTIONS = ['subjects','chapters','topics','notifications','studentProgress'];
+const ADMIN_ONLY_SECTIONS = ['subjects','chapters','topics','notifications','studentProgress','usageReports'];
 function sectionAllowed(key){
   if(!isRestrictedRole()) return true; // admins always see every section
   if(isSchoolRole()){
@@ -2541,6 +2544,7 @@ window.goToPage = function(key){
   if(RESOURCE_MODULES[key] && RESOURCE_MODULES[key].live) renderResourceBrowser(RESOURCE_MODULES[key]);
   if(key==='myProgress'){ mpView = { mode:'dashboard' }; renderMyProgress(); }
   if(key==='studentProgress') renderStudentProgressPage();
+  if(key==='usageReports') renderUsageReports();
   if(key==='noticeBoard') renderNoticeBoard();
   if(key==='notifications' && !isRestrictedRole()) renderNotificationsPage();
   document.getElementById('sidebar').classList.remove('open');
@@ -2870,6 +2874,7 @@ function renderEntityPage(key){
           ${isSchoolRole() ? '' : `<label for="studentSchoolFilter">School</label>
           <select class="f-input" id="studentSchoolFilter"><option value="">All schools</option></select>`}
           <span class="stu-count" id="studentFilterCount"></span>
+          ${readOnly ? '' : `<button class="btn btn-ghost" id="studentImportBtn" title="Add many students at once from an Excel or CSV file"><i class="fa-solid fa-file-import"></i> Import from Excel</button>`}
           ${readOnly ? '' : `<button class="btn btn-ghost" id="studentRegNoBtn" title="Give register numbers to students who don't have one yet"><i class="fa-solid fa-id-card"></i> Assign Register Numbers</button>`}
           ${isSchoolRole() ? '' : `<button class="btn btn-ghost" id="studentExportBtn"><i class="fa-solid fa-file-excel"></i> Export to Excel</button>`}
         </div>
@@ -2889,6 +2894,8 @@ function renderEntityPage(key){
       if(sf) sf.addEventListener('change', (e)=>{ studentSchoolFilter = e.target.value; selectedStudentIds.clear(); renderEntityTable('students'); });
       const ex = document.getElementById('studentExportBtn');
       if(ex) ex.addEventListener('click', exportStudentsToExcel);
+      const impBtn = document.getElementById('studentImportBtn');
+      if(impBtn) impBtn.addEventListener('click', openStudentImport);
       const regBtn = document.getElementById('studentRegNoBtn');
       if(regBtn) regBtn.addEventListener('click', assignMissingRegisterNumbers);
       if(!readOnly){
@@ -4451,6 +4458,7 @@ window.deleteNotification = async function(id){
 
 window.closeModal = function(){
   if(bulkState && bulkState.uploading) return; // don't close mid bulk-upload
+  if(importState && importState.running) return; // don't close mid student import
   document.getElementById('modalOverlay').classList.remove('show');
   document.getElementById('modalBox').classList.remove('wide');
   document.getElementById('modalSaveBtn').style.display = '';
@@ -4459,6 +4467,7 @@ window.closeModal = function(){
   document.getElementById('modalSaveBtn').disabled = false;
   modalCtx=null;
   bulkState=null;
+  importState=null;
 };
 
 /* =================================================================
@@ -4546,6 +4555,10 @@ async function assignMissingRegisterNumbers(){
    separate Firebase app makes the account and is always cleaned up. */
 async function createLoginAccount(email, pass){
   const secondaryApp = initializeApp(firebaseConfig, 'Secondary'+Date.now());
+  if(APP_CHECK_SITE_KEY){
+    // Once App Check is enforced, account creation must also prove it comes from this portal.
+    try{ initializeAppCheck(secondaryApp, { provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: false }); }catch(e){ console.warn('App Check (secondary)', e); }
+  }
   try{
     const secondaryAuth = getAuth(secondaryApp);
     const cred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
@@ -4555,6 +4568,383 @@ async function createLoginAccount(email, pass){
     deleteApp(secondaryApp).catch(()=>{});
   }
 }
+/* =================================================================
+   USAGE TRACKING (students only, kept small)
+   • studentActivity/{uid}: when the student was last active (written at most
+     once a day per device).
+   • usage/{section__materialId}: how often a material was opened, in total
+     and per school (each student counts at most once a day per material).
+   ================================================================= */
+function todayKey(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function usageSchoolKey(){ return (currentProfile && currentProfile.schoolId) || 'none'; }
+function recordStudentActive(){
+  if(!isStudentRole() || !currentUser) return;
+  const k = 'sattva-active-'+currentUser.uid;
+  try{ if(localStorage.getItem(k) === todayKey()) return; }catch(e){}
+  setDoc(doc(db,'studentActivity',currentUser.uid), { lastActive: serverTimestamp(), schoolId: (currentProfile && currentProfile.schoolId) || '' })
+    .then(()=>{ try{ localStorage.setItem(k, todayKey()); }catch(e){} })
+    .catch(err=>console.warn('activity', err));
+}
+function recordMaterialOpen(cfg, row){
+  if(!isStudentRole() || !currentUser || !cfg || !row) return;
+  recordStudentActive();
+  const id = `${cfg.key}__${row.id}`;
+  const k = 'sattva-usage-'+currentUser.uid;
+  let seen = { day: todayKey(), ids: [] };
+  try{ const x = JSON.parse(localStorage.getItem(k)||'null'); if(x && x.day===seen.day) seen = x; }catch(e){}
+  if(seen.ids.includes(id)) return; // already counted today
+  setDoc(doc(db,'usage',id), {
+    module: cfg.key, itemId: row.id, subjectId: row.subjectId || '',
+    opens: increment(1), bySchool: { [usageSchoolKey()]: increment(1) }, lastOpenedAt: serverTimestamp()
+  }, { merge:true }).then(()=>{
+    seen.ids.push(id);
+    try{ localStorage.setItem(k, JSON.stringify(seen)); }catch(e){}
+  }).catch(err=>console.warn('usage', err));
+}
+
+/* =================================================================
+   USAGE REPORTS (admin page)
+   ================================================================= */
+let usageReport = { data:null, loading:false, error:null, school:'', section:'', sort:'most', inactiveDays:14, showAll:false };
+async function loadUsageReport(){
+  if(usageReport.loading) return;
+  usageReport.loading = true; usageReport.error = null;
+  renderUsageReports();
+  try{
+    const [act, use] = await Promise.all([getDocs(collection(db,'studentActivity')), getDocs(collection(db,'usage'))]);
+    const activity = {}; act.forEach(d=>{ activity[d.id] = d.data(); });
+    const usage = {}; use.forEach(d=>{ usage[d.id] = d.data(); });
+    usageReport.data = { activity, usage, loadedAt: new Date() };
+  }catch(err){ console.warn('usage report', err); usageReport.error = err; }
+  usageReport.loading = false;
+  renderUsageReports();
+}
+function studentLastSeen(uid){
+  const a = usageReport.data && usageReport.data.activity[uid];
+  const t1 = a ? tsToDate(a.lastActive) : null;
+  const t2 = lastLoginByUid[uid] ? tsToDate(lastLoginByUid[uid].at) : null;
+  if(t1 && t2) return t1 > t2 ? t1 : t2;
+  return t1 || t2 || null;
+}
+function materialTitle(cfg, r){ return (cfg.itemType==='video'||cfg.itemType==='audio') ? (r.name||'Untitled') : (stripHtmlExt(r.fileName)||'Untitled'); }
+function renderUsageReports(){
+  const page = document.getElementById('page-usageReports');
+  if(!page || isRestrictedRole() || !page.classList.contains('active')) return;
+  ensureBackGuardSoon();
+  if(!usageReport.data && !usageReport.loading && !usageReport.error){ loadUsageReport(); return; }
+  const schools = (entityCache.schools||[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const head = `<div class="page-head"><div><h2>Usage Reports</h2><p>Who is active and which materials are opened most. Counting started when this report was added.</p></div>
+    <button class="btn btn-ghost" type="button" id="urRefresh" title="Loads the latest numbers (about 1 read per student and per material)"><i class="fa-solid fa-rotate"></i> Refresh</button></div>`;
+  const wire = ()=>{ const b = document.getElementById('urRefresh'); if(b) b.onclick = ()=>loadUsageReport(); };
+  if(usageReport.loading || !entityCache.students){ page.innerHTML = head + `<div class="table-panel">${emptyCatState('fa-spinner fa-spin','Loading…','Getting the latest usage.')}</div>`; wire(); return; }
+  if(usageReport.error){ page.innerHTML = head + `<div class="table-panel">${emptyCatState('fa-triangle-exclamation','Could not load usage','Check that your Firestore rules include the usage rules, then press Refresh.')}</div>`; wire(); return; }
+
+  const { usage } = usageReport.data;
+  const sf = usageReport.school;
+  const students = (entityCache.students||[]).filter(st=>!sf || st.schoolId===sf);
+  const now = Date.now(), DAY = 86400000;
+  const seenOf = new Map(students.map(st=>[st.id, studentLastSeen(st.id)]));
+  const within = (st, days)=>{ const d = seenOf.get(st.id); return !!d && (now - d.getTime()) <= days*DAY; };
+  const active7 = students.filter(st=>within(st,7)).length;
+  const active30 = students.filter(st=>within(st,30)).length;
+  const inactiveDays = usageReport.inactiveDays;
+  const inactive = students.filter(st=>!within(st, inactiveDays))
+    .sort((a,b)=>((seenOf.get(a.id)||0) - (seenOf.get(b.id)||0)));
+  const pctOf = (n,t)=> t ? Math.round(n*100/t) : 0;
+  const card = (icon,label,num,sub)=>`<div class="pg-card"><div class="pg-label"><i class="fa-solid ${icon}"></i> ${label}</div><div class="pg-pct">${num}</div><div class="pg-sub">${sub}</div></div>`;
+  const summary = `<div class="pg-summary">
+    ${card('fa-users','Students', students.length, sf ? 'in this school' : 'across all schools')}
+    ${card('fa-bolt','Active in last 7 days', active7, `${pctOf(active7, students.length)}% of students`)}
+    ${card('fa-calendar-check','Active in last 30 days', active30, `${pctOf(active30, students.length)}% of students`)}
+    ${card('fa-user-clock',`Not active for ${inactiveDays}+ days`, inactive.length, 'including never signed in')}
+  </div>`;
+
+  // Schools table (all schools view)
+  let schoolTable = '';
+  if(!sf){
+    const rows = schools.map(sc=>{
+      const list = (entityCache.students||[]).filter(st=>st.schoolId===sc.id);
+      const a7 = list.filter(st=>{ const d = studentLastSeen(st.id); return d && now-d.getTime() <= 7*DAY; }).length;
+      const idle = list.filter(st=>{ const d = studentLastSeen(st.id); return !d || now-d.getTime() > inactiveDays*DAY; }).length;
+      return { sc, total:list.length, a7, idle, pct: pctOf(a7, list.length) };
+    }).sort((a,b)=>a.pct-b.pct);
+    schoolTable = `<div class="mp-panel" style="margin-bottom:1.1rem;"><div class="mp-panel-head"><i class="fa-solid fa-school"></i><div><h3>Schools</h3><p>Lowest activity first — these may need a push. Tap a school to see only its numbers.</p></div></div>
+      <div style="overflow-x:auto;"><table class="pg-table" id="urSchools"><thead><tr><th>School</th><th>Students</th><th>Active (7 days)</th><th>% active</th><th>Not active ${inactiveDays}+ days</th></tr></thead><tbody>
+      ${rows.length ? rows.map(r=>`<tr data-ur-school="${escapeAttr(r.sc.id)}" style="cursor:pointer;"><td>${escapeHtml(r.sc.name||'School')}</td><td>${r.total}</td><td>${r.a7}</td><td><span class="pg-mini"><span class="pg-bar"><span style="width:${r.pct}%"></span></span>${r.pct}%</span></td><td>${r.idle}</td></tr>`).join('') : `<tr><td colspan="5">No schools yet.</td></tr>`}
+      </tbody></table></div></div>`;
+  }
+
+  // Materials table
+  const sections = Object.values(RESOURCE_MODULES).filter(c=>!usageReport.section || c.key===usageReport.section);
+  let mats = [];
+  sections.forEach(cfg=>{ (cfg.rows||[]).forEach(r=>{
+    const u = usage[`${cfg.key}__${r.id}`];
+    const opens = u ? (sf ? Number((u.bySchool||{})[sf]||0) : Number(u.opens||0)) : 0;
+    mats.push({ cfg, r, opens, last: u ? tsToDate(u.lastOpenedAt) : null });
+  }); });
+  mats.sort((a,b)=> usageReport.sort==='most' ? b.opens-a.opens : a.opens-b.opens);
+  const totalMats = mats.length;
+  if(!usageReport.showAll) mats = mats.slice(0, 25);
+  const never = sections.reduce((n,cfg)=>n + (cfg.rows||[]).filter(r=>!usage[`${cfg.key}__${r.id}`]).length, 0);
+  const matTable = `<div class="mp-panel" style="margin-bottom:1.1rem;"><div class="mp-panel-head"><i class="fa-solid fa-book-open"></i><div><h3>Materials</h3><p>${never} of ${totalMats} have never been opened${sf?' (all schools)':''}. Each student counts once per material per day.</p></div></div>
+    <div class="pg-toolbar" style="padding:.8rem 1rem 0;">
+      <select class="f-input" id="urSection" aria-label="Section"><option value="">All sections</option>${Object.values(RESOURCE_MODULES).map(c=>`<option value="${c.key}" ${usageReport.section===c.key?'selected':''}>${escapeHtml(c.label)}</option>`).join('')}</select>
+      <select class="f-input" id="urSort" aria-label="Order"><option value="most" ${usageReport.sort==='most'?'selected':''}>Most opened first</option><option value="least" ${usageReport.sort==='least'?'selected':''}>Least opened first</option></select>
+    </div>
+    <div style="overflow-x:auto;"><table class="pg-table"><thead><tr><th>Material</th><th>Section</th><th>Subject</th><th>Opens</th><th>Last opened</th></tr></thead><tbody>
+    ${mats.length ? mats.map(m=>`<tr><td>${escapeHtml(materialTitle(m.cfg,m.r))}${m.r.chapterName?`<div style="font-size:.72rem;color:var(--text-2);">${escapeHtml(m.r.chapterName)}</div>`:''}</td><td>${escapeHtml(m.cfg.label)}</td><td>${escapeHtml(subjectDisplayName(m.r.subjectId)||m.r.subjectName||'')}</td><td><strong>${m.opens}</strong></td><td>${m.last ? escapeHtml(relTime(m.last)) : '—'}</td></tr>`).join('') : `<tr><td colspan="5">No materials uploaded yet.</td></tr>`}
+    </tbody></table></div>
+    ${totalMats > 25 ? `<div style="padding:.6rem 1rem 1rem;"><button class="btn btn-ghost" type="button" id="urShowAll">${usageReport.showAll ? 'Show top 25 only' : `Show all ${totalMats}`}</button></div>` : ''}
+  </div>`;
+
+  // Inactive students
+  const schoolName = new Map(schools.map(sc=>[sc.id, sc.name||'']));
+  const inactiveTable = `<div class="mp-panel"><div class="mp-panel-head"><i class="fa-solid fa-user-clock"></i><div><h3>Students not active recently</h3><p>Longest inactive first, with contact numbers to follow up.</p></div>
+      <button class="mp-link" type="button" id="urExport"><i class="fa-solid fa-file-excel"></i> Export</button></div>
+    <div class="pg-toolbar" style="padding:.8rem 1rem 0;">
+      <select class="f-input" id="urDays" aria-label="Not active for"><option value="7" ${inactiveDays===7?'selected':''}>Not active for 7+ days</option><option value="14" ${inactiveDays===14?'selected':''}>Not active for 14+ days</option><option value="30" ${inactiveDays===30?'selected':''}>Not active for 30+ days</option></select>
+    </div>
+    <div style="overflow-x:auto;"><table class="pg-table"><thead><tr><th>Student</th><th>Register No.</th><th>School</th><th>Last active</th><th>Phone</th><th>Parent phone</th></tr></thead><tbody>
+    ${inactive.length ? inactive.slice(0,200).map(st=>{ const d = seenOf.get(st.id); return `<tr><td>${escapeHtml(st.name||'')}</td><td>${escapeHtml(st.registerNumber||'')}</td><td>${escapeHtml(schoolName.get(st.schoolId)||'—')}</td><td>${d ? escapeHtml(relTime(d)) : '<span style="color:var(--red);">Never</span>'}</td><td>${escapeHtml(st.phone||'')}</td><td>${escapeHtml(st.parentPhone||'')}</td></tr>`; }).join('') : `<tr><td colspan="6">Everyone has been active recently. 🎉</td></tr>`}
+    </tbody></table></div>${inactive.length>200?`<p style="padding:.6rem 1rem 1rem;font-size:.75rem;color:var(--text-2);">Showing 200 of ${inactive.length}. Use Export for the full list.</p>`:''}</div>`;
+
+  const toolbar = `<div class="pg-toolbar"><select class="f-input" id="urSchool" aria-label="School"><option value="">All schools</option>${schools.map(sc=>`<option value="${escapeAttr(sc.id)}" ${sf===sc.id?'selected':''}>${escapeHtml(sc.name||'School')}</option>`).join('')}</select>
+    <span style="align-self:center;font-size:.78rem;color:var(--text-2);">Updated ${escapeHtml(relTime(usageReport.data.loadedAt))}</span></div>`;
+  page.innerHTML = head + toolbar + summary + schoolTable + matTable + inactiveTable;
+  wire();
+  page.querySelector('#urSchool').onchange = e=>{ usageReport.school = e.target.value; renderUsageReports(); };
+  page.querySelector('#urSection').onchange = e=>{ usageReport.section = e.target.value; usageReport.showAll=false; renderUsageReports(); };
+  page.querySelector('#urSort').onchange = e=>{ usageReport.sort = e.target.value; renderUsageReports(); };
+  page.querySelector('#urDays').onchange = e=>{ usageReport.inactiveDays = Number(e.target.value); renderUsageReports(); };
+  const sa = page.querySelector('#urShowAll'); if(sa) sa.onclick = ()=>{ usageReport.showAll = !usageReport.showAll; renderUsageReports(); };
+  page.querySelectorAll('[data-ur-school]').forEach(tr=>tr.onclick = ()=>{ usageReport.school = tr.dataset.urSchool; renderUsageReports(); document.getElementById('main').scrollTo(0,0); });
+  page.querySelector('#urExport').onclick = async ()=>{
+    if(!(await ensureXlsx())){ showToast('Excel could not load. Check your internet connection and try again.', true); return; }
+    if(!inactive.length){ showToast('Nobody to export — everyone has been active.'); return; }
+    const data = inactive.map((st,i)=>{ const d = seenOf.get(st.id); return { 'S.No':i+1, 'Register Number':st.registerNumber||'', 'Name':st.name||'', 'School':schoolName.get(st.schoolId)||'', 'Last Active': d ? fmtDateTime(d) : 'Never', 'Phone':st.phone||'', 'Parent / Guardian Name':st.parentName||'', 'Parent / Guardian Phone':st.parentPhone||'', 'Email':st.email||'' }; });
+    const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch:6},{wch:16},{wch:26},{wch:30},{wch:22},{wch:16},{wch:24},{wch:16},{wch:30}];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Inactive Students');
+    XLSX.writeFile(wb, `Inactive_Students_${inactiveDays}days_${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
+}
+
+/* =================================================================
+   BULK STUDENT IMPORT (Excel / CSV)
+   Pick a school, upload a sheet, check the preview, import. Each student
+   gets a login, a profile and a register number, exactly like Create User.
+   At the end the admin downloads an Excel file with everyone's logins.
+   ================================================================= */
+const IMPORT_COLUMNS = [
+  { key:'name',        label:'Full Name',               aliases:['name','fullname','studentname','student'] , req:true },
+  { key:'email',       label:'Email',                   aliases:['email','emailid','emailaddress','loginemail','mail'], req:true },
+  { key:'phone',       label:'Contact Number',          aliases:['phone','contact','contactnumber','mobile','mobilenumber','phonenumber','studentphone'] },
+  { key:'parentName',  label:'Parent / Guardian Name',  aliases:['parentname','guardianname','parentguardianname','fathername','mothername','parent'] },
+  { key:'parentPhone', label:'Parent / Guardian Phone', aliases:['parentphone','guardianphone','parentguardianphone','parentmobile','parentcontact','fatherphone','motherphone'] },
+  { key:'dob',         label:'Date of Birth',           aliases:['dob','dateofbirth','birthdate'] },
+  { key:'city',        label:'City',                    aliases:['city','town','place'] },
+  { key:'password',    label:'Password',                aliases:['password','temporarypassword','temppassword'] }
+];
+const IMPORT_SAMPLE = [
+  { 'Full Name':'Asha Kumar', 'Email':'asha.kumar@example.com', 'Contact Number':'9876543210', 'Parent / Guardian Name':'Ravi Kumar', 'Parent / Guardian Phone':'9876500000', 'Date of Birth':'2011-05-14', 'City':'Bengaluru', 'Password':'' }
+];
+let importState = null; // { schoolId, rows:[{...data, status, message, regNo, password}], running }
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function normHeader(h){ return String(h||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function importCellText(v){
+  if(v instanceof Date && !isNaN(v)){ // local date parts — toISOString() would shift Indian dates back a day
+    const dd = new Date(v.getTime() + 12*3600000); // noon-safe against midnight rounding
+    return `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+  }
+  return String(v==null?'':v).trim();
+}
+function toIsoDob(v){
+  const t = importCellText(v);
+  if(!t) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  const m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/); // DD-MM-YYYY (India)
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return t;
+}
+function randomPassword(){
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const a = new Uint32Array(8); crypto.getRandomValues(a);
+  return [...a].map(n=>chars[n % chars.length]).join('');
+}
+async function downloadImportTemplate(){
+  if(!(await ensureXlsx())){ showToast('Excel could not load. Check your internet connection and try again.', true); return; }
+  const ws = XLSX.utils.json_to_sheet(IMPORT_SAMPLE, { header: IMPORT_COLUMNS.map(c=>c.label) });
+  ws['!cols'] = IMPORT_COLUMNS.map(()=>({ wch:24 }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Students');
+  XLSX.writeFile(wb, 'Student_Import_Template.xlsx');
+}
+function openStudentImport(){
+  if(isRestrictedRole()) return;
+  const schools = (entityCache.schools||[]).filter(sc=>sc.status!=='Inactive').sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  importState = { schoolId: (studentSchoolFilter && studentSchoolFilter!=='__none__') ? studentSchoolFilter : '', rows: [], running:false };
+  modalCtx = { key:'students', editId:null };
+  document.getElementById('modalTitle').textContent = 'Import Students from Excel';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="f-group"><label class="f-label">School</label>
+      <select class="f-input" style="padding-left:.9rem;" id="impSchool">
+        <option value="">— Select School —</option>
+        ${schools.map(sc=>`<option value="${sc.id}" ${sc.id===importState.schoolId?'selected':''}>${escapeHtml(sc.name||'')}${sc.shortCode?` (${escapeHtml(sc.shortCode)})`:' — no short code yet'}</option>`).join('')}
+      </select>
+    </div>
+    <div class="f-group"><label class="f-label">Excel or CSV File</label>
+      <input class="f-input" style="padding-left:.9rem;" type="file" id="impFile" accept=".xlsx,.xls,.csv">
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">Needs at least <strong>Full Name</strong> and <strong>Email</strong> columns. Optional: Contact Number, Parent / Guardian Name, Parent / Guardian Phone, Date of Birth, City, Password.
+        <button type="button" class="btn btn-ghost" id="impTemplateBtn" style="padding:.25rem .6rem;font-size:.72rem;margin-left:.3rem;"><i class="fa-solid fa-download"></i> Download template</button></p>
+    </div>
+    <div class="f-group"><label class="f-label">Passwords</label>
+      <select class="f-input" style="padding-left:.9rem;" id="impPwMode">
+        <option value="auto">Create a different password for each student</option>
+        <option value="same">Use the same password for everyone</option>
+      </select>
+      <input class="f-input" style="padding-left:.9rem;margin-top:.5rem;display:none;" id="impPwSame" placeholder="Password for everyone (6+ characters)">
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">A Password column in the file is used for those rows instead. You'll download everyone's login details at the end.</p>
+    </div>
+    <div id="impSummary" style="font-size:.8rem;font-weight:600;margin-bottom:.5rem;"></div>
+    <div style="overflow-x:auto;"><table id="impTable"></table></div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+  document.getElementById('modalBox').classList.add('wide');
+  const btn = document.getElementById('modalSaveBtn');
+  btn.style.display=''; document.getElementById('modalCancelBtn').textContent='Cancel';
+  document.getElementById('impTemplateBtn').onclick = downloadImportTemplate;
+  document.getElementById('impSchool').onchange = (e)=>{ importState.schoolId = e.target.value; renderImportTable(); };
+  document.getElementById('impPwMode').onchange = (e)=>{ document.getElementById('impPwSame').style.display = e.target.value==='same' ? '' : 'none'; };
+  document.getElementById('impFile').onchange = (e)=>readImportFile(e.target.files && e.target.files[0]);
+  btn.onclick = runStudentImport;
+  renderImportTable();
+}
+async function readImportFile(file){
+  if(!file) return;
+  if(!(await ensureXlsx())){ showToast('Excel could not load. Check your internet connection and try again.', true); return; }
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), { type:'array', cellDates:true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(sheet, { defval:'', raw:true });
+    if(!raw.length){ showToast('That file has no rows.', true); return; }
+    const headers = Object.keys(raw[0]);
+    const map = {};
+    headers.forEach(h=>{ const n = normHeader(h); const col = IMPORT_COLUMNS.find(c=>c.aliases.includes(n)); if(col && !map[col.key]) map[col.key] = h; });
+    if(!map.name || !map.email){ showToast('The file needs a "Full Name" and an "Email" column. Download the template to see the layout.', true); return; }
+    importState.rows = raw.map(r=>{
+      const row = {};
+      IMPORT_COLUMNS.forEach(c=>{ row[c.key] = map[c.key] ? importCellText(r[map[c.key]]) : ''; });
+      row.email = row.email.toLowerCase();
+      row.dob = toIsoDob(map.dob ? r[map.dob] : '');
+      return row;
+    }).filter(r=>Object.values(r).some(v=>v)); // skip blank lines
+    renderImportTable();
+  }catch(err){ console.warn('import read', err); showToast('Could not read that file. Save it as .xlsx or .csv and try again.', true); }
+}
+// Checks every row before anything is created.
+function validateImportRows(){
+  const portalEmails = new Set((entityCache.students||[]).map(s=>String(s.email||'').toLowerCase()));
+  const seen = new Set();
+  importState.rows.forEach(r=>{
+    if(r.status==='done') return;
+    r.status = 'ready'; r.message = '';
+    if(!r.name){ r.status='error'; r.message='Name is missing'; }
+    else if(!EMAIL_RE.test(r.email)){ r.status='error'; r.message='Email is missing or not valid'; }
+    else if(seen.has(r.email)){ r.status='error'; r.message='Same email appears twice in the file'; }
+    else if(portalEmails.has(r.email)){ r.status='skip'; r.message='Already a student in the portal'; }
+    else if(r.password && r.password.length<6){ r.status='error'; r.message='Password in file is shorter than 6 characters'; }
+    if(r.email) seen.add(r.email);
+  });
+}
+const IMPORT_PILL = { ready:['pill-Active','Ready'], error:['pill-Inactive','Fix in file'], skip:['pill-Scheduled','Skipped'], done:['pill-Completed','Imported ✓'], failed:['pill-Inactive','Failed'], waiting:['pill-draft','Not imported yet'] };
+function renderImportTable(){
+  if(!importState) return;
+  const tbl = document.getElementById('impTable'), sum = document.getElementById('impSummary'), btn = document.getElementById('modalSaveBtn');
+  if(!tbl) return;
+  if(!importState.rows.length){
+    tbl.innerHTML=''; sum.style.color='var(--text-3)';
+    sum.textContent = importState.schoolId ? 'Choose the Excel or CSV file.' : 'Select the school, then choose the file.';
+    btn.disabled = true; btn.textContent = 'Import'; return;
+  }
+  validateImportRows();
+  const c = {}; importState.rows.forEach(r=>{ c[r.status]=(c[r.status]||0)+1; });
+  tbl.innerHTML = `<thead><tr><th>#</th><th>Name</th><th>Email</th><th>Contact</th><th>Parent</th><th>Status</th></tr></thead><tbody>${importState.rows.map((r,i)=>{
+    const [cls,label] = IMPORT_PILL[r.status] || ['',''];
+    return `<tr><td>${i+1}</td><td>${escapeHtml(r.name||'—')}</td><td>${escapeHtml(r.email||'—')}</td><td>${escapeHtml(r.phone||'')}</td><td>${escapeHtml(r.parentName||'')}</td>
+      <td><span class="pill ${cls}">${label}</span>${r.message?`<div style="font-size:.7rem;color:var(--text-2);margin-top:2px;">${escapeHtml(r.message)}</div>`:''}${r.regNo?`<div style="font-size:.7rem;color:var(--text-2);">${escapeHtml(r.regNo)}</div>`:''}</td></tr>`;
+  }).join('')}</tbody>`;
+  const parts = [`${importState.rows.length} row${importState.rows.length===1?'':'s'}`];
+  if(c.done) parts.push(`${c.done} imported`);
+  if(c.ready) parts.push(`${c.ready} ready`);
+  if(c.waiting) parts.push(`${c.waiting} not imported yet`);
+  if(c.skip) parts.push(`${c.skip} already in the portal`);
+  if(c.error) parts.push(`${c.error} need fixing in the file`);
+  if(c.failed) parts.push(`${c.failed} failed`);
+  sum.style.color='var(--text)'; sum.textContent = parts.join(' • ');
+  const todo = (c.ready||0) + (c.failed||0) + (c.waiting||0);
+  if(!importState.running){ btn.disabled = !todo || !importState.schoolId; btn.textContent = todo ? `Import ${todo} student${todo===1?'':'s'}` : 'Import'; }
+}
+async function runStudentImport(){
+  if(!importState || importState.running) return;
+  const school = (entityCache.schools||[]).find(x=>x.id===importState.schoolId);
+  if(!school){ showToast('Please select the school first.', true); return; }
+  if(!normalizeShortCode(school.shortCode)){ showToast(`${school.name||'This school'} has no short code yet, so register numbers can't be given. Add one in Schools → edit the school.`, true); return; }
+  const mode = document.getElementById('impPwMode').value;
+  const same = document.getElementById('impPwSame').value;
+  if(mode==='same' && same.length<6){ showToast('The password for everyone must be at least 6 characters.', true); return; }
+  validateImportRows();
+  const todo = importState.rows.filter(r=>['ready','failed','waiting'].includes(r.status));
+  if(!todo.length) return;
+  if(!confirm(`Create ${todo.length} student login${todo.length===1?'':'s'} for ${school.name}?`)) return;
+  importState.running = true;
+  const btn = document.getElementById('modalSaveBtn'), cancel = document.getElementById('modalCancelBtn');
+  btn.disabled = true; cancel.disabled = true;
+  // One temporary Firebase app for the whole import, so the admin stays signed in.
+  const secondaryApp = initializeApp(firebaseConfig, 'Import'+Date.now());
+  if(APP_CHECK_SITE_KEY){ try{ initializeAppCheck(secondaryApp, { provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled:true }); }catch(e){} }
+  const secondaryAuth = getAuth(secondaryApp);
+  let ok = 0, limitHit = false;
+  try{
+    for(let i=0;i<todo.length;i++){
+      const r = todo[i];
+      if(limitHit){ r.status='waiting'; r.message='Firebase limit reached — run the import again later'; continue; }
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Importing ${i+1} of ${todo.length}...`;
+      r.password = r.password || (mode==='same' ? same : randomPassword());
+      try{
+        const cred = await createUserWithEmailAndPassword(secondaryAuth, r.email, r.password);
+        const uid = cred.user.uid;
+        await signOut(secondaryAuth);
+        const now = new Date().toISOString();
+        await setDoc(doc(db,'users',uid), { name:r.name, email:r.email, role:'student', status:'active', createdAt:now });
+        const data = { name:r.name, email:r.email, phone:r.phone, parentName:r.parentName, parentPhone:r.parentPhone, dob:r.dob, city:r.city,
+          schoolId: school.id, board: BOARD_OPTIONS[0], className: CLASS_OPTIONS[0], sectionAccessOverrides:{}, status:'Active', createdAt: now };
+        try{ r.regNo = await createStudentWithRegisterNumber(doc(db,'students',uid), data); }
+        catch(regErr){ console.warn('register number', regErr); await setDoc(doc(db,'students',uid), data); r.message = 'No register number yet — use "Assign Register Numbers"'; }
+        r.status = 'done'; ok++;
+      }catch(err){
+        const code = String(err.code||'');
+        if(code.includes('too-many-requests')){ limitHit = true; r.password = ''; r.status='waiting'; r.message='Firebase limit reached — run the import again later'; }
+        else if(code.includes('email-already-in-use')){ r.password=''; r.status='failed'; r.message = loginCreateErrorMessage(err, r.email); }
+        else { r.password=''; r.status='failed'; r.message = friendlyAuthError(err); }
+      }
+      renderImportTable();
+    }
+  }finally{
+    deleteApp(secondaryApp).catch(()=>{});
+    importState.running = false; cancel.disabled = false; cancel.textContent = 'Close';
+    renderImportTable();
+  }
+  if(ok) await downloadImportResults(school);
+  showToast(limitHit
+    ? `Imported ${ok}. Firebase only lets one connection create a limited number of accounts per hour — open the import again in about an hour to finish the rest.`
+    : `Imported ${ok} student${ok===1?'':'s'}. Their login details have been downloaded.`, limitHit);
+}
+async function downloadImportResults(school){
+  if(!(await ensureXlsx())) return;
+  const rows = importState.rows.filter(r=>r.status==='done').map((r,i)=>({ 'S.No':i+1, 'Register Number':r.regNo||'', 'Full Name':r.name, 'Login Email':r.email, 'Temporary Password':r.password||'', 'School':school.name||'' }));
+  if(!rows.length) return;
+  const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = [{wch:6},{wch:16},{wch:28},{wch:32},{wch:20},{wch:32}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Logins');
+  XLSX.writeFile(wb, `Student_Logins_${(school.shortCode||'school')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function loginCreateErrorMessage(err, email){
   if(String(err.code||'').includes('email-already-in-use')){
     const inPortal = (entityCache.students||[]).some(s=>(s.email||'').toLowerCase()===String(email||'').toLowerCase());
@@ -5102,8 +5492,11 @@ function avatarHtml(name, photoUrl, cls){
 }
 // Shown to students in Mock-Question Paper when no papers are available yet.
 function mockExamsComingState(){
-  return emptyCatState('fa-calendar-days', 'Mock exams start from February 2027', 'You will get a notification when they are available.');
+  // Only students get notifications, so only they're told they'll be notified.
+  const sub = isStudentRole() ? 'You will get a notification when they are available.' : '';
+  return emptyCatState('fa-calendar-days', 'Mock Exam Starts from February 2027', sub);
 }
+
 function emptyCatState(icon, title, msg){
   return `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid ${icon}"></i><h4>${title}</h4><p>${msg}</p></div>`;
 }
@@ -5212,7 +5605,7 @@ function renderResSubjectLevel(cfg, grid){
   const map = {};
   rows.forEach(r=>{ if(!map[r.subjectId]) map[r.subjectId]={name:subjectDisplayName(r.subjectId)||r.subjectName,count:0}; map[r.subjectId].count++; });
   const items = Object.entries(map).sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||''));
-  if(!items.length){ grid.innerHTML = emptyCatState('fa-book','No subjects yet','No uploads found for this class.'); return; }
+  if(!items.length){ grid.innerHTML = cfg.key==='studyMaterials' ? mockExamsComingState() : emptyCatState('fa-book','No subjects yet','No uploads found for this class.'); return; }
   grid.innerHTML = items.map(([id,v])=>catCard('subject', id, v.name, v.name, v.count, 'fa-book')).join('');
 }
 function renderResYearLevel(cfg, grid){
@@ -5815,6 +6208,7 @@ async function viewResource(moduleKey, id){
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
+  recordMaterialOpen(cfg, row);
   document.getElementById('aiViewerTitle').textContent = stripHtmlExt(row.fileName) || row.subtopic || 'View Content';
   document.getElementById('aiViewerMeta').textContent = [row.board, row.className, subjectDisplayName(row.subjectId)||row.subjectName, cfg.byYear ? qpYearLabel(qpYearKey(row)) : '', cfg.byYear ? qpTypeOf(row) : '', row.chapterName, row.topicName, row.subtopic].filter(Boolean).join(' • ');
   document.getElementById('aiViewerBackBtn').innerHTML = `<i class="fa-solid fa-arrow-left"></i> Back to ${cfg.label}`;
@@ -5932,6 +6326,7 @@ function viewLessonVideo(moduleKey, id){
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
+  recordMaterialOpen(cfg, row);
   document.getElementById('lessonViewerTitle').textContent = row.name || 'Lesson Video';
   document.getElementById('lessonViewerMeta').textContent = [row.board, row.className, row.subjectName, row.chapterName, row.topicName, row.subtopic].filter(Boolean).join(' • ');
   const embedUrl = toEmbeddableVideoUrl(row.videoUrl);
@@ -5973,6 +6368,7 @@ function viewAudioLesson(moduleKey, id){
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
+  recordMaterialOpen(cfg, row);
   document.getElementById('audioViewerTitle').textContent = row.name || 'Audio Explanation';
   document.getElementById('audioViewerMeta').textContent = [row.board, row.className, row.subjectName, row.chapterName, row.topicName, row.subtopic].filter(Boolean).join(' • ');
   document.getElementById('apTitle').textContent = row.name || 'Untitled';
