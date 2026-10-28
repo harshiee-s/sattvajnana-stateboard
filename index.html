@@ -6372,7 +6372,10 @@ function audioSourceCandidates(url){
   ];
   const gh = githubAudioSources(url);
   if(gh) return gh;
-  return /^https?:\/\//i.test(url) ? [url] : [];
+  if(!/^https?:\/\//i.test(url)) return [];
+  // The portal runs on https, so an http:// audio link is blocked. Load it over https.
+  if(/^http:\/\//i.test(url)) return ['https://' + url.slice(7), url];
+  return [url];
 }
 // GitHub: a normal file link (github.com/…/blob/…) is a web page, not the file.
 // Turn it into GitHub's direct file address. Files stored with Git LFS
@@ -6427,6 +6430,15 @@ function audioTryNextSource(){
     document.getElementById('audioPlayerCard').hidden = true;
     document.getElementById('apDriveFrame').src = `https://drive.google.com/file/d/${audioState.driveId}/preview`;
     document.getElementById('apDriveFallback').hidden = false;
+    return;
+  }
+  const code = (document.getElementById('audioPlayerEl').error || {}).code || audioState.lastErrorCode;
+  if(code === 4 && !audioState.driveId){
+    showAudioError('This audio file was found, but the browser cannot play its format. Convert it to MP3 (or AAC .m4a) and upload it again.');
+    return;
+  }
+  if(code === 2 && !audioState.driveId){
+    showAudioError('The audio file could not be downloaded. Check that the link opens the file in a browser, and that the file name in the link exactly matches the uploaded file.');
     return;
   }
   showAudioError('This audio could not be played. If it is a Google Drive file, make sure it is shared as "Anyone with the link can view". If it is on GitHub, make sure the repository is public (private repositories cannot be played). Otherwise use a direct link to an MP3 file.');
@@ -6489,7 +6501,12 @@ function wireAudioPlayer(){
   audioEl.addEventListener('play', ()=>{ playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>'; card.classList.add('is-playing'); });
   audioEl.addEventListener('pause', ()=>{ playBtn.innerHTML = '<i class="fa-solid fa-play"></i>'; card.classList.remove('is-playing'); });
   audioEl.addEventListener('ended', ()=>{ playBtn.innerHTML = '<i class="fa-solid fa-play"></i>'; card.classList.remove('is-playing'); });
-  audioEl.addEventListener('error', ()=>{ if(audioEl.getAttribute('src')) audioTryNextSource(); });
+  audioEl.addEventListener('error', ()=>{
+    if(!audioEl.getAttribute('src')) return;
+    audioState.lastErrorCode = audioEl.error && audioEl.error.code;
+    console.warn('Audio failed:', audioEl.currentSrc, audioEl.error && audioEl.error.code, audioEl.error && audioEl.error.message);
+    audioTryNextSource();
+  });
   audioEl.addEventListener('loadedmetadata', ()=>{ durEl.textContent = formatAudioTime(audioEl.duration); });
   audioEl.addEventListener('timeupdate', ()=>{
     if(seeking) return;
