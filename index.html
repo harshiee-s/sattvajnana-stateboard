@@ -17,7 +17,7 @@
   var lastTap = 0;
   document.addEventListener('touchend', function(e){                    // double-tap zoom
     var now = Date.now();
-    var tappable = e.target.closest && e.target.closest('button,a,input,textarea,select,label,[onclick],[role="button"],[data-cat],[data-page],.bn-item,.cat-card,.file-card,.mp-row,.pg-dot,summary,[contenteditable]');
+    var tappable = e.target.closest && e.target.closest('button,a,input,textarea,select,label,video,audio,[onclick],[role="button"],[data-cat],[data-page],.bn-item,.cat-card,.file-card,.mp-row,.pg-dot,summary,[contenteditable]');
     if(now - lastTap < 300 && !tappable) e.preventDefault(); // repeated taps on buttons still count
     lastTap = now;
   }, { passive:false });
@@ -450,7 +450,7 @@ tr.row-selected td{background:rgba(108,92,231,.07);}
    for Drive embeds — YouTube/other links render uncropped via .is-drive toggle. */
 .lesson-video-wrap{position:relative;overflow:hidden;border-radius:var(--radius-sm);background:#000;height:74vh;border:1px solid var(--border);box-shadow:var(--shadow-md);}
 .ai-viewer-frame{width:100%;height:74vh;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;box-shadow:var(--shadow-md);}
-.lesson-video-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none;}
+.lesson-video-wrap iframe,.lesson-video-wrap video{position:absolute;top:0;left:0;width:100%;height:100%;border:none;background:#000;}
 .lesson-video-wrap.is-drive iframe{top:-56px;height:calc(100% + 56px);}
 
 /* ---------------- STYLISH AUDIO PLAYER (Audio Explanations) ---------------- */
@@ -552,7 +552,20 @@ input.ap-volume::-moz-range-track{height:4px;border-radius:99px;background:rgba(
 /* ===== Full screen (and landscape on phones) ===== */
 .fs-exit-btn{display:none;position:absolute;top:.6rem;right:.6rem;z-index:5;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:99px;
   background:rgba(11,17,32,.78);color:#fff;font-size:.78rem;font-weight:700;border:1px solid rgba(255,255,255,.2);box-shadow:0 6px 16px -6px rgba(0,0,0,.5);}
-.fs-rotated .fs-exit-btn,#aiViewerPanel:fullscreen .fs-exit-btn,#lessonViewerPanel:fullscreen .fs-exit-btn{display:inline-flex;}
+.fs-rotated .fs-exit-btn,.fs-fill .fs-exit-btn,#aiViewerPanel:fullscreen .fs-exit-btn,#lessonViewerPanel:fullscreen .fs-exit-btn{display:inline-flex;}
+/* The Exit button fades back after 3 seconds so it doesn't sit on top of the video (still tappable). */
+.fs-fill .fs-exit-btn,#lessonViewerPanel.fs-rotated .fs-exit-btn,#lessonViewerPanel:fullscreen .fs-exit-btn{animation:fsExitFade .4s ease 3s forwards;}
+.fs-exit-btn:hover,.fs-exit-btn:focus-visible{animation:none !important;opacity:1 !important;}
+@keyframes fsExitFade{to{opacity:.3;}}
+/* Lesson video full screen on iPhone: fills the screen without rotating the
+   player (rotating Drive/YouTube players breaks their controls). Turning the
+   phone sideways makes it landscape. */
+.fs-fill{position:fixed !important;inset:0;z-index:3000;margin:0 !important;padding:0 !important;border:none !important;border-radius:0 !important;
+  background:#000 !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important;overflow:hidden;
+  padding-top:env(safe-area-inset-top) !important;padding-bottom:env(safe-area-inset-bottom) !important;}
+.fs-fill .lesson-video-wrap{height:100% !important;max-height:none !important;border:none;border-radius:0;box-shadow:none;}
+.fs-fill .lesson-video-wrap::before{display:none;}
+@media (orientation:landscape){.fs-fill .lesson-video-wrap.is-drive iframe{top:0;height:100%;}}
 #lessonViewerPanel:fullscreen,#lessonViewerPanel:-webkit-full-screen{padding:0;border:none;border-radius:0;background:#000;}
 #lessonViewerPanel:fullscreen .lesson-video-wrap,#lessonViewerPanel:-webkit-full-screen .lesson-video-wrap{height:100vh !important;border:none;border-radius:0;}
 /* iPhone (no fullscreen / screen lock for websites): the panel covers the screen
@@ -563,6 +576,9 @@ body.fs-rotated-open{overflow:hidden;}
 #lessonViewerPanel.fs-rotated{background:#000 !important;}
 .fs-rotated iframe.ai-viewer-frame{width:100%;height:100% !important;border:none;border-radius:0;}
 .fs-rotated .lesson-video-wrap{height:100% !important;border:none;border-radius:0;}
+#lessonViewerPanel:fullscreen .lesson-video-wrap,#lessonViewerPanel:-webkit-full-screen .lesson-video-wrap,.fs-rotated .lesson-video-wrap{max-height:none !important;}
+#lessonViewerPanel:fullscreen .lesson-video-wrap::before,#lessonViewerPanel:-webkit-full-screen .lesson-video-wrap::before,.fs-rotated .lesson-video-wrap::before{display:none;}
+#lessonViewerPanel:fullscreen .lesson-video-wrap.is-drive iframe,#lessonViewerPanel:-webkit-full-screen .lesson-video-wrap.is-drive iframe,.fs-rotated .lesson-video-wrap.is-drive iframe{top:0;height:100%;}
 @media (orientation:portrait){
   .fs-rotated{top:0;left:0;right:auto;bottom:auto;width:100vh;width:100dvh;height:100vw;transform-origin:top left;transform:rotate(90deg) translateY(-100%);}
 }
@@ -878,7 +894,9 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
   .modal-head,.modal-body{padding-left:1.1rem;padding-right:1.1rem;}
   .modal-foot{flex-direction:column-reverse;padding-left:1.1rem;padding-right:1.1rem;}
   .modal-foot .btn{width:100%;justify-content:center;}
-  .lesson-video-wrap{height:38vh;}
+  .lesson-video-wrap{height:auto;max-height:calc(100vh - 190px);max-height:calc(100dvh - 190px);}
+  .lesson-video-wrap::before{content:'';display:block;padding-top:56.25%;}
+  .lesson-video-wrap.is-drive::before{padding-top:calc(56.25% + 56px);}
   .ai-viewer-frame{height:52vh;}
   .f-input,.tb-search input,#globalSearchInput{font-size:16px;}
   
@@ -942,6 +960,104 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
   .tb-greet h1 .tg-hello,.tb-greet h1 .tg-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .tb-greet h1 .tg-name{font-size:1rem;}
 }
+
+/* Phone held sideways while watching a lesson: video fills the whole screen. */
+@media (max-width:900px) and (orientation:landscape) and (max-height:520px){
+  body:has(#page-lessonViewer.active){overflow:hidden;}
+  body:has(#page-lessonViewer.active) #lessonViewerPanel{position:fixed !important;inset:0;z-index:3000;margin:0;padding:0 !important;border:none !important;border-radius:0 !important;background:#000 !important;box-shadow:none !important;overflow:hidden;}
+  body:has(#page-lessonViewer.active) #lessonViewerPanel .lesson-video-wrap{height:100% !important;max-height:none !important;border:none;border-radius:0;box-shadow:none;}
+  body:has(#page-lessonViewer.active) #lessonViewerPanel .lesson-video-wrap::before{display:none;}
+  body:has(#page-lessonViewer.active) #lessonViewerPanel .lesson-video-wrap.is-drive iframe{top:0;height:100%;}
+  body:has(#page-lessonViewer.active) #lessonVideoError{position:absolute;top:50%;left:1rem;right:1rem;transform:translateY(-50%);color:#fff;}
+}
+
+/* ===== Sattva lesson video player (our own controls over the browser's video) ===== */
+.vp{position:absolute;inset:0;z-index:1;background:#000;overflow:hidden;color:#fff;font-family:'Inter',sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.vp[hidden]{display:none;}
+.vp video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;}
+.vp-tap{position:absolute;inset:0;z-index:1;cursor:pointer;}
+.vp.ui-hidden .vp-tap{cursor:none;}
+.vp-top,.vp-bar,.vp-big{transition:opacity .25s ease,transform .25s ease;}
+.vp.ui-hidden .vp-top,.vp.ui-hidden .vp-bar{opacity:0;pointer-events:none;}
+.vp.ui-hidden .vp-bar{transform:translateY(10px);}
+.vp-top{position:absolute;top:0;left:0;right:0;z-index:2;padding:.85rem 1rem 2.4rem;pointer-events:none;
+  background:linear-gradient(180deg,rgba(5,7,14,.78),rgba(5,7,14,0));}
+.vp-title{font-family:'DM Serif Display',serif;font-size:1.02rem;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vp-title small{display:block;font-family:'Inter',sans-serif;font-size:.68rem;color:rgba(255,255,255,.62);margin-top:2px;letter-spacing:.02em;}
+.vp-big{position:absolute;left:50%;top:50%;z-index:2;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--navy);
+  background:radial-gradient(circle at 35% 30%,var(--gold-soft),var(--gold) 62%,#a97e22 100%);
+  box-shadow:0 0 0 7px rgba(217,178,76,.16),0 14px 32px -8px rgba(217,178,76,.65),inset 0 2px 5px rgba(255,255,255,.35);}
+.vp-big .fa-play{position:relative;left:3px;}
+.vp-big:hover{transform:scale(1.05);}
+.vp-big:active{transform:scale(.96);}
+.vp.is-playing .vp-big,.vp.is-loading .vp-big{opacity:0;pointer-events:none;}
+.vp-spinner{display:none;position:absolute;left:50%;top:50%;z-index:2;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;pointer-events:none;
+  border:3px solid rgba(255,255,255,.18);border-top-color:var(--gold);animation:loaderSpin .9s linear infinite;}
+.vp.is-loading .vp-spinner{display:block;}
+.vp-bar{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:2.6rem .9rem .55rem;
+  background:linear-gradient(0deg,rgba(5,7,14,.9) 0%,rgba(5,7,14,.55) 55%,rgba(5,7,14,0) 100%);}
+input.vp-seek{-webkit-appearance:none;appearance:none;display:block;width:100%;height:5px;margin:0 0 .45rem;border-radius:99px;cursor:pointer;outline:none;
+  background:linear-gradient(90deg,var(--gold) var(--vp-progress,0%),rgba(255,255,255,.4) var(--vp-progress,0%),rgba(255,255,255,.4) var(--vp-buffer,0%),rgba(255,255,255,.18) var(--vp-buffer,0%));
+  transition:height .15s ease;}
+input.vp-seek:hover,input.vp-seek:active{height:7px;}
+input.vp-seek::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold-soft);cursor:pointer;
+  box-shadow:0 0 0 4px rgba(217,178,76,.28),0 2px 6px rgba(0,0,0,.45);}
+input.vp-seek::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;background:var(--gold-soft);cursor:pointer;box-shadow:0 0 0 4px rgba(217,178,76,.28),0 2px 6px rgba(0,0,0,.45);}
+input.vp-seek::-moz-range-track{height:5px;border-radius:99px;background:transparent;}
+.vp-row{display:flex;align-items:center;gap:.2rem;}
+.vp-btn{width:40px;height:40px;flex-shrink:0;border-radius:50%;border:none;background:none;color:#fff;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;font-size:1rem;transition:background .15s ease,transform .15s ease;}
+.vp-btn:hover{background:rgba(255,255,255,.12);}
+.vp-btn:active{transform:scale(.92);}
+.vp-btn.vp-play{color:var(--gold-soft);font-size:1.1rem;}
+.vp-skip{position:relative;}
+.vp-skip b{position:absolute;font-size:.5rem;font-weight:800;top:50%;left:50%;transform:translate(-50%,-38%);}
+.vp-time{font-size:.78rem;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.88);margin-left:.35rem;white-space:nowrap;}
+.vp-time span{color:rgba(255,255,255,.55);}
+.vp-spacer{flex:1;min-width:.2rem;}
+select.vp-speed{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:99px;font-size:.72rem;font-weight:700;
+  padding:.35rem .55rem;cursor:pointer;outline:none;margin-right:.15rem;}
+select.vp-speed option{color:#101828;}
+.vp-vol{display:flex;align-items:center;}
+input.vp-volume{-webkit-appearance:none;appearance:none;width:0;height:4px;border-radius:99px;cursor:pointer;outline:none;opacity:0;transition:width .2s ease,opacity .2s ease;
+  background:linear-gradient(90deg,var(--gold-soft) var(--vp-vol,100%),rgba(255,255,255,.2) var(--vp-vol,100%));}
+.vp-vol:hover input.vp-volume,.vp-vol:focus-within input.vp-volume{width:72px;opacity:1;margin-right:.3rem;}
+input.vp-volume::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#fff;cursor:pointer;}
+input.vp-volume::-moz-range-thumb{width:11px;height:11px;border:none;border-radius:50%;background:#fff;cursor:pointer;}
+.vp.no-volume .vp-vol{display:none;}
+.vp-btn:focus-visible,.vp-big:focus-visible,input.vp-seek:focus-visible,select.vp-speed:focus-visible,input.vp-volume:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+.vp-ripple{position:absolute;top:0;bottom:0;width:36%;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;
+  background:rgba(255,255,255,.1);}
+.vp-ripple.left{left:0;border-radius:0 999px 999px 0;}
+.vp-ripple.right{right:0;border-radius:999px 0 0 999px;}
+.vp-ripple span{display:flex;flex-direction:column;align-items:center;gap:.35rem;font-size:.78rem;font-weight:700;}
+.vp-ripple i{font-size:1.4rem;color:var(--gold-soft);}
+.vp-ripple.show{animation:vpRipple .65s ease;}
+@keyframes vpRipple{0%{opacity:0;}20%{opacity:1;}100%{opacity:0;}}
+.vp-msg{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;padding:1.2rem 1.4rem;
+  text-align:center;background:radial-gradient(circle at 50% 40%,rgba(30,46,82,.92),rgba(5,7,14,.96));}
+.vp-msg[hidden]{display:none;}
+.vp-msg i{font-size:1.6rem;color:var(--gold);}
+.vp-msg strong{font-size:.98rem;}
+.vp-msg span{font-size:.8rem;line-height:1.5;color:rgba(255,255,255,.75);max-width:480px;}
+.vp:has(.vp-msg:not([hidden])) .vp-big,.vp:has(.vp-msg:not([hidden])) .vp-bar,.vp:has(.vp-msg:not([hidden])) .vp-spinner,.vp:has(.vp-msg:not([hidden])) .vp-top{display:none;}
+/* our player has its own full-screen button, so the panel's Exit chip isn't needed */
+#lessonViewerPanel:has(.vp:not([hidden])) .fs-exit-btn{display:none !important;}
+/* desktop: the box takes the video's 16:9 shape (phones already do) */
+@media (min-width:901px){ .lesson-video-wrap:has(.vp:not([hidden])){height:auto;aspect-ratio:16/9;max-height:74vh;} }
+@media (max-width:640px){
+  .vp-btn{width:36px;height:36px;font-size:.92rem;}
+  .vp-big{width:62px;height:62px;margin:-31px 0 0 -31px;font-size:1.25rem;}
+  .vp-bar{padding:2rem .5rem .35rem;}
+  .vp-time{font-size:.7rem;margin-left:.15rem;}
+  .vp-title{font-size:.9rem;}
+  .vp-top{padding:.6rem .8rem 2rem;}
+  .vp-vol{display:none;}
+  select.vp-speed{padding:.28rem .4rem;font-size:.68rem;}
+}
+@media (max-width:360px){ .vp-skip{display:none;} }
 </style>
 </head>
 <body>
@@ -1022,7 +1138,7 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
       <div class="sb-item" data-page="students" data-admin-only data-school-ok><i class="fa-solid fa-user-graduate"></i> Students</div>
       <div class="sb-item" data-page="createUser" data-admin-only><i class="fa-solid fa-user-plus"></i> Create User</div>
       <div class="sb-item" data-page="notifications" data-admin-only><i class="fa-solid fa-bell"></i> Notifications</div>
-      <div class="sb-item" data-page="studentProgress" data-admin-only><i class="fa-solid fa-chart-line"></i> Student Progress</div>
+      <div class="sb-item" data-page="studentProgress" data-admin-only data-school-ok><i class="fa-solid fa-chart-line"></i> Student Progress</div>
       <div class="sb-item" data-page="usageReports" data-admin-only><i class="fa-solid fa-chart-pie"></i> Usage Reports</div>
 
       <div class="sb-group-label" data-admin-only>Academic Management</div>
@@ -1194,8 +1310,35 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
       <div class="table-panel" id="lessonViewerPanel">
         <button type="button" class="fs-exit-btn" onclick="exitFullscreenMode()" aria-label="Exit full screen"><i class="fa-solid fa-compress"></i> Exit</button>
         <div class="lesson-video-wrap" id="lessonVideoWrap">
-          <iframe id="lessonViewerFrame" title="Lesson video" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"></iframe>
+          <iframe id="lessonViewerFrame" title="Lesson video" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          <div class="vp" id="vpRoot" hidden>
+            <video id="lessonViewerVideo" playsinline webkit-playsinline preload="metadata" disablepictureinpicture></video>
+            <div class="vp-tap" id="vpTap" aria-hidden="true"></div>
+            <div class="vp-ripple left" id="vpRippleL"><span><i class="fa-solid fa-backward"></i>10 seconds</span></div>
+            <div class="vp-ripple right" id="vpRippleR"><span><i class="fa-solid fa-forward"></i>10 seconds</span></div>
+            <div class="vp-spinner" aria-hidden="true"></div>
+            <div class="vp-msg" id="vpMsg" role="alert" hidden></div>
+            <div class="vp-top"><div class="vp-title" id="vpTitle"></div></div>
+            <button type="button" class="vp-big" id="vpBig" aria-label="Play"><i class="fa-solid fa-play"></i></button>
+            <div class="vp-bar" id="vpBar">
+              <input type="range" class="vp-seek" id="vpSeek" min="0" max="100" step="0.1" value="0" aria-label="Seek">
+              <div class="vp-row">
+                <button type="button" class="vp-btn vp-play" id="vpPlay" aria-label="Play"><i class="fa-solid fa-play"></i></button>
+                <button type="button" class="vp-btn vp-skip" id="vpBack" aria-label="Back 10 seconds" title="Back 10s"><i class="fa-solid fa-rotate-left"></i></button>
+                <button type="button" class="vp-btn vp-skip" id="vpFwd" aria-label="Forward 10 seconds" title="Forward 10s"><i class="fa-solid fa-rotate-right"></i></button>
+                <span class="vp-time" id="vpTime">0:00 <span>/ 0:00</span></span>
+                <span class="vp-spacer"></span>
+                <select class="vp-speed" id="vpSpeed" aria-label="Playback speed" title="Playback speed">
+                  <option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option>
+                </select>
+                <div class="vp-vol"><button type="button" class="vp-btn" id="vpMute" aria-label="Mute"><i class="fa-solid fa-volume-high"></i></button>
+                  <input type="range" class="vp-volume" id="vpVolume" min="0" max="1" step="0.01" value="1" aria-label="Volume"></div>
+                <button type="button" class="vp-btn" id="vpFs" aria-label="Full screen" title="Full screen"><i class="fa-solid fa-expand"></i></button>
+              </div>
+            </div>
+          </div>
         </div>
+        <p id="lessonVideoError" hidden style="margin:.9rem auto 0;max-width:560px;text-align:center;font-size:.82rem;color:var(--red);"></p>
       </div>
     </section>
 
@@ -1218,12 +1361,12 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
           <div class="ap-title" id="apTitle">Untitled</div>
           <div class="ap-seek-row">
             <span class="ap-time" id="apCurrentTime">0:00</span>
-            <input type="range" class="ap-seek" id="apSeek" min="0" max="100" value="0" step="0.1">
+            <input type="range" class="ap-seek" id="apSeek" aria-label="Seek" min="0" max="100" value="0" step="0.1">
             <span class="ap-time" id="apDuration">0:00</span>
           </div>
           <div class="ap-controls-row">
             <div class="ap-speed-wrap">
-              <select class="ap-speed" id="apSpeed" title="Playback speed">
+              <select class="ap-speed" id="apSpeed" title="Playback speed" aria-label="Playback speed">
                 <option value="0.75">0.75×</option>
                 <option value="1" selected>1×</option>
                 <option value="1.25">1.25×</option>
@@ -1232,18 +1375,18 @@ button.mp-row:hover{background:rgba(108,92,231,.06);}
               </select>
             </div>
             <div class="ap-transport">
-              <button class="ap-skip-btn" id="apSkipBack" title="Back 10s"><i class="fa-solid fa-rotate-left"></i></button>
-              <button class="ap-play-btn" id="apPlayBtn"><i class="fa-solid fa-play"></i></button>
-              <button class="ap-skip-btn" id="apSkipFwd" title="Forward 10s"><i class="fa-solid fa-rotate-right"></i></button>
+              <button class="ap-skip-btn" id="apSkipBack" title="Back 10s" aria-label="Back 10 seconds"><i class="fa-solid fa-rotate-left"></i></button>
+              <button class="ap-play-btn" id="apPlayBtn" aria-label="Play"><i class="fa-solid fa-play"></i></button>
+              <button class="ap-skip-btn" id="apSkipFwd" title="Forward 10s" aria-label="Forward 10 seconds"><i class="fa-solid fa-rotate-right"></i></button>
             </div>
             <div class="ap-volume-wrap">
               <i class="fa-solid fa-volume-high" id="apVolIcon"></i>
-              <input type="range" class="ap-volume" id="apVolume" min="0" max="1" value="1" step="0.01">
+              <input type="range" class="ap-volume" id="apVolume" aria-label="Volume" min="0" max="1" value="1" step="0.01">
             </div>
           </div>
         </div>
         <audio id="audioPlayerEl" preload="metadata" style="display:none;"></audio>
-        <div id="apDriveFallback" hidden style="max-width:520px;margin:1rem auto 0;">
+        <div id="apDriveFallback" hidden style="display:none !important;">
           <p style="font-size:.78rem;color:var(--text-2);margin-bottom:.5rem;text-align:center;"><i class="fa-solid fa-circle-info"></i> Playing with Google Drive's player.</p>
           <iframe id="apDriveFrame" title="Audio player" allow="autoplay" style="width:100%;height:120px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;"></iframe>
         </div>
@@ -1438,7 +1581,9 @@ const app = initializeApp(firebaseConfig);
    "reCAPTCHA Enterprise", copy the site key here, and set the token
    time-to-live to 7 days (keeps you inside the free reCAPTCHA allowance).
    Then watch App Check → Metrics for a week before pressing "Enforce". */
-const APP_CHECK_SITE_KEY = '6LcTZv4tAAAAAEmI6PJaF3T7dsLnjLuwqghL88kS'; // reCAPTCHA Enterprise site key (public by design)
+// TURNED OFF FOR TESTING. To switch reCAPTCHA / App Check back on, put the key
+// back between the quotes: '6LcTZv4tAAAAAEmI6PJaF3T7dsLnjLuwqghL88kS'
+const APP_CHECK_SITE_KEY = ''; // reCAPTCHA Enterprise site key (public by design)
 if(APP_CHECK_SITE_KEY){
   try{
     // Opened from your own computer (file:// or localhost)? Use a debug
@@ -1860,10 +2005,10 @@ function subscribeSchoolLogin(uid){
   }, (err)=>console.warn('Could not watch school login', err));
 }
 // A School login downloads only its own school's students, and only while
-// the admin allows the Students page for School logins.
+// the admin allows the Students or Student Progress page for School logins.
 function syncSchoolStudentsListener(){
   if(!isSchoolRole() || !currentProfile) return;
-  const want = sectionAllowed('students') && !!currentProfile.schoolId;
+  const want = (sectionAllowed('students') || sectionAllowed('studentProgress')) && !!currentProfile.schoolId;
   if(!want){
     if(entityUnsubs.students){ try{ entityUnsubs.students(); }catch(e){} delete entityUnsubs.students; }
     entityCache.students = [];
@@ -1875,6 +2020,7 @@ function syncSchoolStudentsListener(){
     rows.sort((a,b)=> tsMillis(studentRegisteredAt(b)) - tsMillis(studentRegisteredAt(a)));
     entityCache.students = rows;
     rehydrateAll();
+    const pg = document.getElementById('page-studentProgress'); if(pg && pg.classList.contains('active')) renderStudentProgressPage();
   }, (err)=>{ console.warn('students', err); if(!entityCache.students) entityCache.students = []; rehydrateAll(); });
 }
 
@@ -2048,7 +2194,8 @@ TOGGLABLE_SECTIONS.forEach(s=>{ DEFAULT_SECTION_ACCESS[s.key] = { student:true, 
 // Extra pages only School logins can be given (students never see these).
 const SCHOOL_EXTRA_SECTIONS = [
   {key:'dashboard', label:'Dashboard',            group:'School Login Pages'},
-  {key:'students',  label:'Students (view only)', group:'School Login Pages'}
+  {key:'students',  label:'Students (view only)', group:'School Login Pages'},
+  {key:'studentProgress', label:'Student Progress (own school)', group:'School Login Pages'}
 ];
 const SCHOOL_PAGES = SCHOOL_EXTRA_SECTIONS.map(s=>s.key);
 const DEFAULT_SCHOOL_EXTRA = {};
@@ -2121,7 +2268,7 @@ function applySectionAccess(){
   if(isSchoolRole()){
     // Dashboard / User Management / Students for School logins, as set in Settings.
     document.querySelectorAll('[data-school-ok]').forEach(el=>{
-      el.style.display = sectionAllowed(el.dataset.page || 'students') ? '' : 'none';
+      el.style.display = (el.dataset.page ? sectionAllowed(el.dataset.page) : (sectionAllowed('students') || sectionAllowed('studentProgress'))) ? '' : 'none';
     });
     syncSchoolStudentsListener();
   }
@@ -2219,8 +2366,19 @@ const ENTITY_SEARCH_META = {
   chapters:  {icon:'fa-layer-group',        get:r=>r.name,  sub:r=>`Chapter • ${r.subjectName||''}`},
   topics:    {icon:'fa-bookmark',           get:r=>r.name,  sub:r=>`Topic • ${r.chapterName||''}`}
 };
+// Text for searching, in any language (English, ಕನ್ನಡ, हिन्दी …):
+// • NFC makes the same letter typed on different keyboards/phones identical
+//   (e.g. a vowel sign stored as one code or as two).
+// • Invisible joiners (ZWJ/ZWNJ) some keyboards add are ignored.
+// • Spaces are collapsed; English is matched without caring about capitals.
+function searchNorm(v){
+  let t = String(v ?? '');
+  try{ t = t.normalize('NFC'); }catch(e){}
+  return t.replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function searchHas(text, q){ return !!text && searchNorm(text).includes(q); }
 function buildSearchResults(query){
-  const q = query.trim().toLowerCase();
+  const q = searchNorm(query);
   if(!q) return [];
   const results = [];
   Object.entries(ENTITY_SEARCH_META).forEach(([key, meta])=>{
@@ -2231,16 +2389,33 @@ function buildSearchResults(query){
     visibleEntityRows(key).forEach(r=>{
       const label = meta.get(r);
       const extra = meta.extra ? meta.extra(r) : '';
-      if((label && String(label).toLowerCase().includes(q)) || (extra && String(extra).toLowerCase().includes(q))){
+      if(searchHas(label, q) || searchHas(extra, q)){
         results.push({ icon:meta.icon, title:String(label), sub:meta.sub(r), action:()=>{ closeMobileSearch(); goToPage(key); } });
       }
+    });
+  });
+  // Chapters and topics by name (e.g. a Kannada or Hindi chapter title), in
+  // every section that has them — works for students and School logins too.
+  const placeSeen = new Set();
+  Object.values(RESOURCE_MODULES).forEach(cfg=>{
+    if(!sectionAllowed(cfg.key) || cfg.subjectOnly || cfg.byYear) return;
+    visibleRows(cfg).forEach(r=>{
+      if(!r.chapterId) return;
+      const subj = subjectDisplayName(r.subjectId)||r.subjectName;
+      const base = { board:r.board, className:r.className, subjectId:r.subjectId, subjectName:r.subjectName, chapterId:r.chapterId, chapterName:r.chapterName };
+      const add = (k, title, sub, path)=>{
+        if(placeSeen.has(k)) return; placeSeen.add(k);
+        results.push({ icon:cfg.icon, title, sub, action:()=>{ closeMobileSearch(); cfg.browsePath = path; goToPage(cfg.key); renderResourceBrowser(cfg); } });
+      };
+      if(searchHas(r.chapterName, q)) add(`${cfg.key}|c|${r.chapterId}`, String(r.chapterName), `Chapter • ${cfg.label} • ${subj||''}`, { ...base });
+      if(r.topicId && searchHas(r.topicName, q)) add(`${cfg.key}|t|${r.topicId}`, String(r.topicName), `Topic • ${cfg.label} • ${[subj, r.chapterName].filter(Boolean).join(' › ')}`, { ...base, topicId:topicKey(r.topicId), topicName:r.topicName });
     });
   });
   Object.values(RESOURCE_MODULES).forEach(cfg=>{
     if(!sectionAllowed(cfg.key)) return; // admin hasn't granted this role access to this section
     visibleRows(cfg).forEach(r=>{
       const label = (cfg.itemType==='video'||cfg.itemType==='audio') ? r.name : r.fileName;
-      if(label && String(label).toLowerCase().includes(q)){
+      if(searchHas(label, q) || searchHas(r.subtopic, q)){
         results.push({
           icon:cfg.icon, title:(cfg.itemType==='video'||cfg.itemType==='audio') ? String(label) : stripHtmlExt(label),
           sub:`${cfg.label} • ${[subjectDisplayName(r.subjectId)||r.subjectName, cfg.byYear ? qpYearLabel(qpYearKey(r)) : '', cfg.byYear ? qpTypeOf(r) : '', cfg.subjectOnly ? '' : r.chapterName].filter(Boolean).join(' › ')}`,
@@ -2464,12 +2639,12 @@ window.addEventListener('popstate', ()=>{
    ================================================================= */
 const BOTTOM_NAV_PLAN = {
   admin:   ['dashboard','schools','students','notifications'],
-  school:  ['dashboard','students','aiKnowledge','lessons','audioLessons','studyMaterials','questionBank','questionPaper'],
+  school:  ['dashboard','students','studentProgress','aiKnowledge','lessons','audioLessons','studyMaterials','questionBank','questionPaper'],
   student: ['myProgress','aiKnowledge','lessons','noticeBoard','audioLessons','studyMaterials','questionBank','questionPaper']
 };
 const BOTTOM_NAV_LABELS = {
   dashboard:'Dashboard', schools:'Schools', students:'Students', notifications:'Notices', myProgress:'Progress',
-  noticeBoard:'Notices', aiKnowledge:'AI Learning', lessons:'Lessons', audioLessons:'Audio',
+  noticeBoard:'Notices', studentProgress:'Progress', aiKnowledge:'AI Learning', lessons:'Lessons', audioLessons:'Audio',
   studyMaterials:'Mock Tests', questionBank:'Questions', questionPaper:'Past Papers'
 };
 // Viewer pages belong to their section's tab.
@@ -2527,10 +2702,14 @@ new MutationObserver(()=>syncBottomNavActive()).observe(document.getElementById(
 function stopMediaPlayback(){
   const vf = document.getElementById('lessonViewerFrame');
   if(vf && vf.getAttribute('src') && vf.getAttribute('src') !== 'about:blank') vf.src = 'about:blank';
+  if(typeof lessonVideoState === 'object' && lessonVideoState){ clearTimeout(lessonVideoState.timer); lessonVideoState.driveId = ''; }
+  const vv = document.getElementById('lessonViewerVideo');
+  if(vv && vv.getAttribute('src')){ vv.pause(); vv.removeAttribute('src'); vv.load(); }
   const df = document.getElementById('apDriveFrame');
   if(df && df.getAttribute('src') && df.getAttribute('src') !== 'about:blank') df.src = 'about:blank';
   const au = document.getElementById('audioPlayerEl');
   if(au && !au.paused) au.pause();
+  if(typeof audioState === 'object' && audioState) audioState.wantPlay = false;
   const card = document.getElementById('audioPlayerCard');
   if(card) card.classList.remove('is-playing');
 }
@@ -2538,7 +2717,7 @@ window.goToPage = function(key){
   if(isStudentRole() && (key==='dashboard' || key==='noAccess')) key = studentHomePage();
   if(isSchoolRole() && (key==='noAccess' || !sectionAllowed(key))) key = restrictedHomePage();
   if(isStudentRole() && ['schools','students','createUser','settings','notifications','studentProgress'].includes(key)) return;
-  if(isSchoolRole() && ['schools','createUser','settings','notifications','studentProgress','myProgress','noticeBoard'].includes(key)) return;
+  if(isSchoolRole() && ['schools','createUser','settings','notifications','myProgress','noticeBoard'].includes(key)) return;
   if(!isRestrictedRole() && key==='myProgress') key = 'studentProgress';
   if(!isRestrictedRole() && key==='noticeBoard') key = 'notifications';
   if(!sectionAllowed(key)) return; // admin hasn't granted this role access to this section
@@ -2570,7 +2749,7 @@ const BOARD_OPTIONS = ['State'];
 const ENTITIES = {
   schools: {
     label:'Schools', singular:'School', icon:'fa-school', collection:'schools',
-    columns:[{k:'name',l:'School Name'},{k:'shortCode',l:'Short Code'},{k:'address',l:'Address'},{k:'pocName',l:'POC Name'},{k:'pocPhone',l:'POC Phone'},{k:'assignedSubjectIds',l:'Subjects Visible to Students',relList:'subjects'},{k:'loginEmail',l:'School Login',schoolLogin:true},{k:'status',l:'Status',pill:true}],
+    columns:[{k:'name',l:'School Name'},{k:'shortCode',l:'Short Code'},{k:'address',l:'Address'},{k:'pocName',l:'POC Name'},{k:'pocPhone',l:'POC Phone'},{k:'assignedSubjectIds',l:'Subjects Visible to Students',relList:'subjects'},{k:'logins',l:'School Logins',schoolLogin:true},{k:'status',l:'Status',pill:true}],
     fields:[
       {k:'name',l:'School Name',type:'text',req:true,ph:'e.g. Sri Hari Sattva Jnana High School'},
       {k:'shortCode',l:'School Short Code',type:'shortCode',req:true,ph:'e.g. SHJ'},
@@ -3054,7 +3233,7 @@ function renderEntityTable(key){
     <tbody>${rows.map(r=>`<tr${selectable && selSet.has(r.id) ? ' class="row-selected"' : ''}>${selectable ? `<td class="sel-col"><input type="checkbox" ${rowSelAttr}="${r.id}" aria-label="Select ${escapeHtml(r.name||'row')}" ${selSet.has(r.id)?'checked':''}></td>` : ''}${cols.map(c=>renderCell(c,r)).join('')}
       <td style="text-align:right;white-space:nowrap;">
         ${readOnly ? '' : `${key==='students' ? `<button class="icon-btn" title="Send password reset link" onclick="sendStudentReset('${r.id}')"><i class="fa-solid fa-key"></i></button><button class="icon-btn" title="Section Access" onclick="openAccessModal('${key}','${r.id}')"><i class="fa-solid fa-shield-halved"></i></button>` : ''}
-        ${key==='schools' && r.loginUid ? `<button class="icon-btn" title="School login's Section Access" onclick="openAccessModal('schools','${r.id}')"><i class="fa-solid fa-shield-halved"></i></button>` : ''}
+        ${key==='schools' && schoolLogins(r).length ? `<button class="icon-btn" title="School login's Section Access" onclick="openAccessModal('schools','${r.id}')"><i class="fa-solid fa-shield-halved"></i></button>` : ''}
         ${key==='subjects' && !r.parentSubjectId ? `<button class="icon-btn" title="Add Sub-Subjects" onclick="openSubSubjectModal('${r.id}')"><i class="fa-solid fa-diagram-project"></i></button>` : ''}
         <button class="icon-btn" onclick="openEntityModal('${key}','${r.id}')"><i class="fa-solid fa-pen"></i></button>
         <button class="icon-btn danger" onclick="deleteEntity('${key}','${r.id}')"><i class="fa-solid fa-trash"></i></button>`}
@@ -3233,7 +3412,7 @@ async function exportSchoolsToExcel(){
     'POC Email': r.pocEmail || '',
     'Subjects Visible to Students': (Array.isArray(r.assignedSubjectIds) ? r.assignedSubjectIds : []).map(id=>subjectName.get(id)).filter(Boolean).join(', '),
     'No. of Students': students.filter(st=>st.schoolId===r.id).length,
-    'School Login': r.loginUid ? `${r.loginEmail||''}${r.loginActive===false?' (disabled)':''}` : '',
+    'School Logins': schoolLogins(r).map(l=>`${l.email||''}${l.active===false?' (disabled)':''}`).join(', '),
     'Status': r.status || '',
     'Created On': tsToDate(r.createdAt) ? tsToDate(r.createdAt).toLocaleDateString('en-IN') : ''
   }));
@@ -3285,9 +3464,9 @@ function renderCell(col, row){
   if(col.date){ const d = tsToDate(val); val = d ? d.toLocaleDateString('en-IN') : '—'; }
   if(col.datetime) val = fmtDateTime(col.get ? col.get(row) : val) || '—';
   if(col.schoolLogin){
-    if(!row.loginUid) return `<td><span style="color:var(--text-3);">None</span></td>`;
-    const on = row.loginActive !== false;
-    return `<td style="white-space:nowrap;">${escapeHtml(row.loginEmail||'')} <span class="pill ${on?'pill-Active':'pill-Inactive'}">${on?'Active':'Disabled'}</span></td>`;
+    const logins = schoolLogins(row);
+    if(!logins.length) return `<td><span style="color:var(--text-3);">None</span></td>`;
+    return `<td>${logins.map(l=>{ const on = l.active !== false; return `<div style="white-space:nowrap;margin:1px 0;">${escapeHtml(l.email||'')} <span class="pill ${on?'pill-Active':'pill-Inactive'}">${on?'Active':'Disabled'}</span></div>`; }).join('')}</td>`;
   }
   if(col.lastLogin){
     const t = lastLoginText(row.id);
@@ -3522,7 +3701,7 @@ window.deleteEntity = async function(key, id){
     try{
       const batch = writeBatch(db);
       batch.delete(doc(db, ENTITIES.schools.collection, id));
-      if(sc && sc.loginUid) batch.delete(doc(db,'users',sc.loginUid)); // its school login stops working too
+      schoolLogins(sc).forEach(l=>batch.delete(doc(db,'users',l.uid))); // all its school logins stop working too
       await batch.commit();
       showToast(`${ENTITIES.schools.singular} deleted.`);
     }
@@ -3785,7 +3964,7 @@ window.openAccessModal = function(key, id){
   document.getElementById('modalBody').innerHTML = `
     <p style="font-size:.8rem;color:var(--text-2);margin:-.2rem 0 .9rem;">
       ${isSchool
-        ? `Choose what this school's login (${escapeHtml(row.loginEmail||'')}) can see. Sections left on "Plan default" follow the School column in Settings → Section Access — use Allow/Block to give this school its own pack.`
+        ? `Choose what this school's ${schoolLogins(row).length===1 ? 'login ('+escapeHtml(schoolLogins(row)[0].email||'')+')' : schoolLogins(row).length+' logins'} can see. Sections left on "Plan default" follow the School column in Settings → Section Access — use Allow/Block to give this school its own pack.`
         : `Choose what ${escapeHtml(row.name||'this '+cfg.singular.toLowerCase())} can see. Sections left on "Plan default" follow the role-wide Section Access settings — use Allow/Block to give this one person a custom pack (e.g. Basic vs Premium).`}
     </p>
     <div class="ms-box" id="accessModalBox" style="max-height:360px;">
@@ -5008,39 +5187,81 @@ async function offerLoginSetup(studentId){
   };
 }
 
-/* -------- Optional School login --------
-   A school can have one login. It sees its own Dashboard, its students
-   (view only) and the AI Learning / Resources sections for its subjects —
-   whatever Settings → Section Access allows for School logins. */
-function schoolLoginBoxHtml(school){
-  const wrap = (inner)=>`<div class="f-group" id="schoolLoginBox" style="border-top:1px solid var(--border);padding-top:.9rem;margin-top:.2rem;">${inner}</div>`;
-  if(school && school.loginUid){
-    const on = school.loginActive !== false;
-    return wrap(`
-      <label class="f-label">School Login</label>
-      <p style="font-size:.82rem;margin-bottom:.6rem;">${escapeHtml(school.loginEmail||'')} <span class="pill ${on?'pill-Active':'pill-Inactive'}">${on?'Active':'Disabled'}</span></p>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-        <button class="btn btn-ghost" type="button" id="slToggleBtn"><i class="fa-solid ${on?'fa-ban':'fa-circle-check'}"></i> ${on?'Disable login':'Enable login'}</button>
-        <button class="btn btn-ghost" type="button" id="slResetBtn"><i class="fa-solid fa-key"></i> Send reset link</button>
-        <button class="btn btn-danger" type="button" id="slRemoveBtn"><i class="fa-solid fa-trash"></i> Remove login</button>
-      </div>
-      ${schoolPackHtml(school.loginSectionAccessOverrides)}`);
+/* -------- School logins (one or more per school) --------
+   A school can have any number of logins (e.g. Principal, Office, a teacher).
+   Each sees its own school's Dashboard, students (view only) and the
+   AI Learning / Resources sections for its subjects — whatever the school's
+   pack and Settings → Section Access allow. The pack is shared by all of
+   that school's logins.
+   Stored on the school as  logins: [{uid, email, name, active, createdAt}].
+   Schools set up before this change kept a single login in loginUid /
+   loginEmail / loginActive; it's read from there and shown in the same list. */
+function schoolLogins(school){
+  if(!school) return [];
+  const list = Array.isArray(school.logins) ? school.logins.filter(l=>l && l.uid) : [];
+  if(school.loginUid && !list.some(l=>l.uid===school.loginUid)){
+    list.unshift({ uid: school.loginUid, email: school.loginEmail || '', name: '', active: school.loginActive !== false, legacy: true });
   }
-  return wrap(`
+  return list;
+}
+function schoolLoginBoxHtml(school){
+  const isNew = !(school && school.id);
+  const logins = schoolLogins(school);
+  const wrap = (inner)=>`<div class="f-group" id="schoolLoginBox" style="border-top:1px solid var(--border);padding-top:.9rem;margin-top:.2rem;">${inner}</div>`;
+  const addFields = `
+      <div class="f-group"><label class="f-label">Name or Role <span style="font-weight:400;color:var(--text-3);">(optional)</span></label><input class="f-input" style="padding-left:.9rem;" id="slName" placeholder="e.g. Principal, Office, Mr. Ramesh"></div>
+      <div class="f-group"><label class="f-label">Login Email</label><input class="f-input" style="padding-left:.9rem;" type="email" id="slEmail" placeholder="e.g. office@school.com"></div>
+      <div class="f-group"><label class="f-label">Temporary Password</label><input class="f-input" style="padding-left:.9rem;" id="slPass" placeholder="At least 6 characters"></div>`;
+  if(isNew){
+    return wrap(`
     <label class="ms-opt"><input type="checkbox" id="slCreate"><strong>Create a login for this school (optional)</strong></label>
     <div id="slFields" style="display:none;margin-top:.6rem;">
-      <div class="f-group"><label class="f-label">Login Email</label><input class="f-input" style="padding-left:.9rem;" type="email" id="slEmail" placeholder="e.g. office@school.com"></div>
-      <div class="f-group"><label class="f-label">Temporary Password</label><input class="f-input" style="padding-left:.9rem;" id="slPass" placeholder="At least 6 characters"></div>
-      <p style="font-size:.72rem;color:var(--text-3);">The school can then sign in to see its Dashboard, its students (view only) and learning materials for its subjects.</p>
+      ${addFields}
+      <p style="font-size:.72rem;color:var(--text-3);">You can add more logins for this school after saving it. Each login sees its school's Dashboard, students (view only) and learning materials for its subjects.</p>
       ${schoolPackHtml(school && school.loginSectionAccessOverrides)}
     </div>`);
+  }
+  return wrap(`
+    <label class="f-label">School Logins</label>
+    <div id="slList">${schoolLoginListHtml(logins)}</div>
+    <button class="btn btn-ghost" type="button" id="slAddToggle" style="margin-top:.6rem;"><i class="fa-solid fa-user-plus"></i> Add a login</button>
+    <div id="slAddFields" style="display:none;margin-top:.7rem;padding:.8rem;border:1px dashed var(--border);border-radius:var(--radius-sm);">
+      ${addFields}
+      <button class="btn btn-primary" type="button" id="slAddBtn"><i class="fa-solid fa-user-plus"></i> Create Login</button>
+    </div>
+    <div id="slPackWrap" ${logins.length ? '' : 'style="display:none;"'}>${schoolPackHtml(school.loginSectionAccessOverrides)}</div>`);
+}
+function schoolLoginListHtml(logins){
+  if(!logins.length) return `<p style="font-size:.8rem;color:var(--text-3);">No logins yet. Add one so this school can sign in.</p>`;
+  return logins.map(l=>{
+    const on = l.active !== false;
+    return `<div class="sl-row" data-uid="${escapeAttr(l.uid)}" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;padding:.55rem 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:.84rem;font-weight:600;overflow-wrap:anywhere;">${escapeHtml(l.email||'')}</div>
+        <div style="font-size:.72rem;color:var(--text-2);">${l.name ? escapeHtml(l.name)+' · ' : ''}<span class="pill ${on?'pill-Active':'pill-Inactive'}">${on?'Active':'Disabled'}</span></div>
+      </div>
+      <button class="icon-btn" type="button" data-sl-act="toggle" title="${on?'Disable this login':'Enable this login'}" aria-label="${on?'Disable':'Enable'} ${escapeAttr(l.email||'')}"><i class="fa-solid ${on?'fa-ban':'fa-circle-check'}"></i></button>
+      <button class="icon-btn" type="button" data-sl-act="reset" title="Send password reset link" aria-label="Send reset link to ${escapeAttr(l.email||'')}"><i class="fa-solid fa-key"></i></button>
+      <button class="icon-btn danger" type="button" data-sl-act="remove" title="Remove this login" aria-label="Remove ${escapeAttr(l.email||'')}"><i class="fa-solid fa-trash"></i></button>
+    </div>`;
+  }).join('');
 }
 function schoolPackHtml(overrides){
   return `<div style="margin-top:.9rem;">
-      <label class="f-label">Section Access (this school's pack)</label>
+      <label class="f-label">Section Access (this school's pack — applies to all its logins)</label>
       <div class="ms-box" id="slAccess" style="max-height:280px;">${sectionOverridesRowsHtml(overrides, schoolPackSections())}</div>
-      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">Leave a section on “Plan default” to follow the School column in Settings → Section Access. Use Allow/Block to give this school its own pack.</p>
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">Leave a section on “Plan default” to follow the School column in Settings → Section Access. Use Allow/Block to give this school its own pack. Click Save to apply.</p>
     </div>`;
+}
+// Redraws just the list of logins (keeps any unsaved changes in the rest of the form).
+function refreshSchoolLoginList(schoolId){
+  const box = document.getElementById('slList');
+  if(!box) return;
+  const school = (entityCache.schools||[]).find(x=>x.id===schoolId);
+  const logins = schoolLogins(school);
+  box.innerHTML = schoolLoginListHtml(logins);
+  const pack = document.getElementById('slPackWrap');
+  if(pack) pack.style.display = logins.length ? '' : 'none';
 }
 function wireSchoolLoginBox(school){
   const cb = document.getElementById('slCreate');
@@ -5048,54 +5269,102 @@ function wireSchoolLoginBox(school){
     cb.addEventListener('change', ()=>{ document.getElementById('slFields').style.display = cb.checked ? '' : 'none'; if(cb.checked) document.getElementById('slEmail').focus(); });
     return;
   }
-  if(!school || !school.loginUid) return;
-  document.getElementById('slToggleBtn').onclick = ()=>setSchoolLoginActive(school, school.loginActive === false);
-  document.getElementById('slRemoveBtn').onclick = ()=>removeSchoolLogin(school);
-  document.getElementById('slResetBtn').onclick = async ()=>{
-    if(!confirm(`Send a password reset link to ${school.loginEmail}?`)) return;
-    try{ await sendPasswordResetEmail(auth, school.loginEmail); showToast(`Password reset link sent to ${school.loginEmail}.`); }
-    catch(err){ showToast(friendlyAuthError(err), true); }
+  if(!school || !school.id) return;
+  const schoolId = school.id;
+  const addFields = document.getElementById('slAddFields');
+  document.getElementById('slAddToggle').onclick = ()=>{
+    const show = addFields.style.display==='none';
+    addFields.style.display = show ? '' : 'none';
+    if(show) document.getElementById('slEmail').focus();
   };
+  document.getElementById('slAddBtn').onclick = async ()=>{
+    const req = readSchoolLoginRequest(true);
+    if(!req) return;
+    const btn = document.getElementById('slAddBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating…';
+    try{
+      const sc = (entityCache.schools||[]).find(x=>x.id===schoolId) || school;
+      await createSchoolLogin(schoolId, sc.name, req.email, req.pass, req.name);
+      showToast(`Login created. ${req.email} can now sign in for ${sc.name||'this school'}.`);
+      ['slName','slEmail','slPass'].forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
+      addFields.style.display = 'none';
+      refreshSchoolLoginList(schoolId);
+    }catch(err){ showToast(loginCreateErrorMessage(err, req.email), true); }
+    finally{ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Login'; }
+  };
+  document.getElementById('slList').addEventListener('click', async (e)=>{
+    const b = e.target.closest('[data-sl-act]');
+    if(!b) return;
+    const uid = b.closest('.sl-row').dataset.uid;
+    const sc = (entityCache.schools||[]).find(x=>x.id===schoolId) || school;
+    const login = schoolLogins(sc).find(l=>l.uid===uid);
+    if(!login) return;
+    b.disabled = true;
+    try{
+      if(b.dataset.slAct==='toggle') await setSchoolLoginActive(schoolId, login, login.active === false);
+      else if(b.dataset.slAct==='remove') await removeSchoolLogin(schoolId, login);
+      else if(b.dataset.slAct==='reset'){
+        if(confirm(`Send a password reset link to ${login.email}?`)){
+          await sendPasswordResetEmail(auth, login.email);
+          showToast(`Password reset link sent to ${login.email}.`);
+        }
+      }
+    }catch(err){ showToast(err.code ? friendlyAuthError(err) : err.message, true); }
+    finally{ b.disabled = false; refreshSchoolLoginList(schoolId); }
+  });
 }
-// Reads the "create a login" box. Returns null (no login wanted), an object, or false (invalid).
-function readSchoolLoginRequest(){
+// Reads the "create a login" fields. Returns null (no login wanted), an object, or false (invalid).
+function readSchoolLoginRequest(force){
   const cb = document.getElementById('slCreate');
-  if(!cb || !cb.checked) return null;
+  if(!force && (!cb || !cb.checked)) return null;
+  const name = (document.getElementById('slName')||{}).value ? document.getElementById('slName').value.trim() : '';
   const email = document.getElementById('slEmail').value.trim();
   const pass = document.getElementById('slPass').value;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast('Please enter a valid login email for the school.', true); return false; }
   if(pass.length < 6){ showToast('The school login password must be at least 6 characters.', true); return false; }
-  return { email, pass };
+  return { email, pass, name };
 }
-async function createSchoolLogin(schoolId, schoolName, email, pass){
+// Rewrites a school's logins list safely, even if two admins edit at once.
+async function updateSchoolLogins(schoolId, change, extraWrites){
+  await runTransaction(db, async tx=>{
+    const ref = doc(db,'schools',schoolId);
+    const snap = await tx.get(ref);
+    if(!snap.exists()) throw new Error('That school no longer exists.');
+    const sc = { id:snap.id, ...snap.data() };
+    const list = schoolLogins(sc).map(l=>{ const c = { ...l }; delete c.legacy; return c; });
+    const result = change(list, sc);
+    const upd = { logins: result.list };
+    if(result.clearLegacy) Object.assign(upd, { loginUid: deleteField(), loginEmail: deleteField(), loginActive: deleteField() });
+    else if(result.legacyActive !== undefined) upd.loginActive = result.legacyActive;
+    tx.update(ref, upd);
+    if(extraWrites) extraWrites(tx);
+  });
+}
+async function createSchoolLogin(schoolId, schoolName, email, pass, personName){
   const uid = await createLoginAccount(email, pass);
   const now = new Date().toISOString();
-  const batch = writeBatch(db);
-  batch.set(doc(db,'users',uid), { name: schoolName || 'School', email, role:'school', schoolId, status:'active', createdAt: now });
-  batch.update(doc(db,'schools',schoolId), { loginUid: uid, loginEmail: email, loginActive: true });
-  await batch.commit();
+  await updateSchoolLogins(schoolId, (list)=>{
+    list.push({ uid, email, name: personName || '', active: true, createdAt: now });
+    return { list };
+  }, tx=>{
+    tx.set(doc(db,'users',uid), { name: personName || schoolName || 'School', schoolName: schoolName || '', email, role:'school', schoolId, status:'active', createdAt: now });
+  });
 }
-async function setSchoolLoginActive(school, active){
-  if(!confirm(active ? `Enable the login ${school.loginEmail}?` : `Disable the login ${school.loginEmail}? The school will be signed out straight away and can't sign in until you enable it again.`)) return;
-  try{
-    const batch = writeBatch(db);
-    batch.update(doc(db,'users',school.loginUid), { status: active ? 'active' : 'inactive' });
-    batch.update(doc(db,'schools',school.id), { loginActive: active });
-    await batch.commit();
-    showToast(active ? 'School login enabled.' : 'School login disabled.');
-    closeModal();
-  }catch(err){ showToast(err.message, true); }
+async function setSchoolLoginActive(schoolId, login, active){
+  if(!confirm(active ? `Enable the login ${login.email}?` : `Disable the login ${login.email}? It will be signed out straight away and can't sign in until you enable it again. Other logins for this school keep working.`)) return;
+  await updateSchoolLogins(schoolId, (list, sc)=>{
+    list.forEach(l=>{ if(l.uid===login.uid) l.active = active; });
+    return { list, legacyActive: sc.loginUid===login.uid ? active : undefined };
+  }, tx=>{ tx.update(doc(db,'users',login.uid), { status: active ? 'active' : 'inactive' }); });
+  showToast(active ? 'Login enabled.' : 'Login disabled.');
 }
-async function removeSchoolLogin(school){
-  if(!confirm(`Remove the login ${school.loginEmail}? The school will lose access straight away.\n\nThe email stays reserved in Firebase. To reuse it for a new login, also delete it in Firebase console → Authentication → Users.`)) return;
-  try{
-    const batch = writeBatch(db);
-    batch.delete(doc(db,'users',school.loginUid));
-    batch.update(doc(db,'schools',school.id), { loginUid: deleteField(), loginEmail: deleteField(), loginActive: deleteField() });
-    await batch.commit();
-    showToast('School login removed.');
-    closeModal();
-  }catch(err){ showToast(err.message, true); }
+async function removeSchoolLogin(schoolId, login){
+  if(!confirm(`Remove the login ${login.email}? It will lose access straight away. Other logins for this school keep working.\n\nThe email stays reserved in Firebase. To reuse it for a new login, also delete it in Firebase console → Authentication → Users.`)) return;
+  await updateSchoolLogins(schoolId, (list, sc)=>({
+    list: list.filter(l=>l.uid!==login.uid),
+    clearLegacy: sc.loginUid===login.uid
+  }), tx=>{ tx.delete(doc(db,'users',login.uid)); });
+  showToast('Login removed.');
 }
 
 async function saveEntity(key, editId){
@@ -5193,7 +5462,7 @@ async function saveEntity(key, editId){
     if(key==='schools' && schoolLoginReq){
       btn.textContent = 'Creating login...';
       try{
-        await createSchoolLogin(savedId, data.name, schoolLoginReq.email, schoolLoginReq.pass);
+        await createSchoolLogin(savedId, data.name, schoolLoginReq.email, schoolLoginReq.pass, schoolLoginReq.name);
         showToast(`School login created. ${data.name||'The school'} can sign in with ${schoolLoginReq.email}.`);
       }catch(err){
         showToast(`School saved, but the login couldn't be created: ${loginCreateErrorMessage(err, schoolLoginReq.email)} Open the school to try again.`, true);
@@ -5581,9 +5850,11 @@ function renderResSubjectLevel(cfg, grid){
     // come from a cheap count query; a subject's items are downloaded only
     // when it's opened (after which its exact visible count is used).
     const p = cfg.browsePath;
-    const emptyState = ()=> cfg.key==='studyMaterials' ? mockExamsComingState()
-      : emptyCatState('fa-book','Nothing here yet','New materials will appear here once they are added.');
-    if(!sectionAllowed(cfg.key)){ grid.innerHTML = emptyState(); return; }
+    const emptyState = (why)=> cfg.key==='studyMaterials' && !isSchoolRole() ? mockExamsComingState()
+      : emptyCatState('fa-book','Nothing here yet', why || 'New materials will appear here once they are added.');
+    // School logins are told exactly why a section is empty, so the admin can fix it.
+    if(!sectionAllowed(cfg.key)){ grid.innerHTML = emptyState(isSchoolRole() ? `${cfg.label} is switched off for your school login. Ask your admin to allow it in Settings → Section Access (School column) or in your school's Section Access.` : ''); return; }
+    if(isSchoolRole() && !assignedSubjectSet().size){ grid.innerHTML = emptyState('No subjects have been given to your school yet. Ask your admin to choose them under Schools → edit your school → "Subjects Visible to Students".'); return; }
     if(!entityCache.subjects){ grid.innerHTML = emptyCatState('fa-spinner fa-spin','Loading…','Getting your subjects.'); return; }
     const subs = sortSubjectsTree(entityCache.subjects.filter(s=>
       subjectAllowed(s.id) && (!s.board || s.board===p.board) && (!s.className || s.className===p.className)));
@@ -5604,7 +5875,15 @@ function renderResSubjectLevel(cfg, grid){
       }
       return { s, count };
     }).filter(x=>x.count!==0);
-    if(!items.length){ grid.innerHTML = emptyState(); return; }
+    if(!items.length){
+      if(isSchoolRole()){
+        const names = subs.map(s=>subjectDisplayName(s)).filter(Boolean);
+        grid.innerHTML = emptyState(names.length
+          ? `None of your school's subjects (${names.join(', ')}) has ${cfg.label} materials for ${p.board} ${p.className} yet. If materials were uploaded, check they were added under one of these subjects.`
+          : `Your school's subjects aren't set up for ${p.board} ${p.className}. Ask your admin to check the subjects given to your school.`);
+      } else grid.innerHTML = emptyState();
+      return;
+    }
     grid.innerHTML = items.map(({s,count})=>catCard('subject', s.id, subjectDisplayName(s), subjectDisplayName(s), count, 'fa-book')).join('');
     return;
   }
@@ -5704,6 +5983,7 @@ function renderResFileLevel(cfg, grid){
       <div class="fc-actions">
         <button class="icon-btn" title="View"><i class="fa-solid ${isMedia?'fa-play':'fa-eye'}"></i></button>
         ${(!readOnly && cfg.visibilityToggle) ? `<button class="icon-btn" title="${r.hidden?'Hidden from students — click to show':'Visible to students — click to hide'}" onclick="event.stopPropagation();toggleResourceVisibility('${cfg.key}','${r.id}')"><i class="fa-solid ${r.hidden?'fa-eye-slash':'fa-eye'}"></i></button>` : ''}
+        ${(!readOnly && isMedia) ? `<button class="icon-btn" title="Edit name or link" aria-label="Edit name or link" onclick="event.stopPropagation();editMediaItem('${cfg.key}','${r.id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
         ${(!readOnly && !isMedia) ? `<button class="icon-btn" title="Replace file" onclick="event.stopPropagation();replaceResourceFile('${cfg.key}','${r.id}')"><i class="fa-solid fa-file-arrow-up"></i></button>` : ''}
         ${readOnly ? '' : `<button class="icon-btn danger" title="Delete" onclick="event.stopPropagation();deleteResource('${cfg.key}','${r.id}')"><i class="fa-solid fa-trash"></i></button>`}
       </div>
@@ -5751,8 +6031,9 @@ function openResourceUploadModal(cfg){
     <div class="f-group"><label class="f-label">Lesson Name</label>
       <input class="f-input" style="padding-left:.9rem;" id="resLessonName" placeholder="e.g. Part 1: Introduction">
     </div>
-    <div class="f-group"><label class="f-label">Video Link (Google Drive or YouTube)</label>
+    <div class="f-group"><label class="f-label">Video Link (Google Drive, YouTube, Vimeo or .mp4)</label>
       <input class="f-input" style="padding-left:.9rem;" id="resVideoUrl" placeholder="https://drive.google.com/file/d/.../view">
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">For Google Drive, open the video file (not its folder), click Share → "Anyone with the link can view", then copy the link.</p>
     </div>
     ` : isAudio ? `
     <div class="f-group"><label class="f-label">Audio Name</label>
@@ -5947,10 +6228,15 @@ async function saveResource(cfg){
     lessonName = document.getElementById('resLessonName').value.trim();
     videoUrl = document.getElementById('resVideoUrl').value.trim();
     if(!lessonName || !videoUrl){ showToast('Please fill in Lesson Name and Video Link.', true); return; }
+    const vProblem = mediaLinkProblem('video', videoUrl);
+    if(vProblem){ showToast(vProblem, true); return; }
+    if(!(await confirmLessonVideo(videoUrl, document.getElementById('modalSaveBtn')))) return;
   } else if(isAudio){
     audioName = document.getElementById('resAudioName').value.trim();
     audioUrl = document.getElementById('resAudioUrl').value.trim();
     if(!audioName || !audioUrl){ showToast('Please fill in Audio Name and Audio Link.', true); return; }
+    const aProblem = mediaLinkProblem('audio', audioUrl);
+    if(aProblem){ showToast(aProblem, true); return; }
   } else {
     if(!cfg.uploadFile){ showToast('Please choose a file to upload.', true); return; }
   }
@@ -6251,7 +6537,7 @@ function withTimeout(promise, ms){
   return Promise.race([Promise.resolve(promise), new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), ms))]);
 }
 function nativeFullscreenElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
-function rotatedPanel(){ return document.querySelector('.fs-rotated'); }
+function rotatedPanel(){ return document.querySelector('.fs-rotated, .fs-fill'); }
 function inFullscreenMode(){ return !!(nativeFullscreenElement() || rotatedPanel()); }
 function enterRotatedMode(panel){
   panel.classList.add('fs-rotated');
@@ -6260,7 +6546,7 @@ function enterRotatedMode(panel){
 }
 window.exitFullscreenMode = function(){
   const rp = rotatedPanel();
-  if(rp){ rp.classList.remove('fs-rotated'); document.body.classList.remove('fs-rotated-open'); }
+  if(rp){ rp.classList.remove('fs-rotated','fs-fill'); document.body.classList.remove('fs-rotated-open'); }
   try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
   if(nativeFullscreenElement()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
   updateFullscreenBtns();
@@ -6287,15 +6573,28 @@ window.toggleFullscreenPanel = async function(panelId){
     if(nativeFullscreenElement()){
       // Full screen worked but the screen direction couldn't be locked: if the
       // phone is upright, use the rotated view instead so it still shows sideways.
-      if(innerWidth > innerHeight){ updateFullscreenBtns(); return; }
+      // Videos stay full screen upright (rotating the player breaks its controls).
+      if(innerWidth > innerHeight || panelId==='lessonViewerPanel'){
+        if(innerWidth <= innerHeight && panelId==='lessonViewerPanel') showToast('Turn your phone sideways for a bigger picture.');
+        updateFullscreenBtns(); return;
+      }
       try{ await (document.exitFullscreen || document.webkitExitFullscreen).call(document); }catch(e){}
     }
   }
-  // …otherwise (iPhone) cover the screen and turn the content sideways.
+  // Lesson videos (iPhone): fill the screen without rotating the player.
+  if(panelId==='lessonViewerPanel'){
+    panel.classList.add('fs-fill');
+    document.body.classList.add('fs-rotated-open');
+    updateFullscreenBtns();
+    if(innerWidth <= innerHeight) showToast('Turn your phone sideways for a bigger picture.');
+    return;
+  }
+  // …otherwise (iPhone, documents) cover the screen and turn the content sideways.
   enterRotatedMode(panel);
 };
 function updateFullscreenBtns(){
   const isFull = inFullscreenMode();
+  if(typeof vpUpdateFsIcon === 'function') vpUpdateFsIcon(isFull);
   if(!nativeFullscreenElement()){ try{ if(screen.orientation && screen.orientation.unlock && !rotatedPanel()) screen.orientation.unlock(); }catch(e){} }
   ['aiFullscreenBtn','lessonFullscreenBtn'].forEach(id=>{
     const btn = document.getElementById(id);
@@ -6306,26 +6605,400 @@ function updateFullscreenBtns(){
 document.addEventListener('fullscreenchange', updateFullscreenBtns);
 document.addEventListener('webkitfullscreenchange', updateFullscreenBtns);
 
-/* =================================================================
-   LEARNING LESSONS — inline video viewer for uploaded Google Drive
-   (or YouTube) links, same "view in the same screen" pattern used
-   for AI Knowledge Base / Resources.
-   ================================================================= */
-function toEmbeddableVideoUrl(url){
-  if(!url) return '';
-  url = url.trim();
-  let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if(m) return `https://drive.google.com/file/d/${m[1]}/preview`;
-  m = /drive\.google\.com/.test(url) && url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if(m) return `https://drive.google.com/file/d/${m[1]}/preview`;
-  m = url.match(/youtube\.com\/(?:shorts|live|embed)\/([a-zA-Z0-9_-]+)/);
-  if(m) return `https://www.youtube.com/embed/${m[1]}`;
-  m = url.match(/youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]+)/);
-  if(m) return `https://www.youtube.com/embed/${m[1]}`;
-  m = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-  if(m) return `https://www.youtube.com/embed/${m[1]}`;
-  return /^https?:\/\//i.test(url) ? url : ''; // only real web links (never javascript: etc.)
+// ---- Link helpers shared by video and audio ----
+function isDriveFolderLink(url){ return /drive\.google\.com\/(?:drive\/)?(?:u\/\d+\/)?folders\//i.test(String(url||'')); }
+function isYouTubeLink(url){ return /(?:youtube\.com|youtu\.be|youtube-nocookie\.com)\//i.test(String(url||'')); }
+const VIDEO_FILE_RE = /\.(mp4|m4v|webm|ogv|mov)(?:[?#]|$)/i;
+const AUDIO_FILE_RE = /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac|weba)(?:[?#]|$)/i;
+// YouTube "t=90", "t=1m30s", "start=90" → seconds
+function youtubeStart(url){
+  const m = String(url).match(/[?&#](?:t|start)=([0-9hms]+)/i);
+  if(!m) return 0;
+  const v = m[1];
+  if(/^\d+$/.test(v)) return Number(v);
+  const h = (v.match(/(\d+)h/)||[])[1]||0, mi = (v.match(/(\d+)m/)||[])[1]||0, s = (v.match(/(\d+)s/)||[])[1]||0;
+  return Number(h)*3600 + Number(mi)*60 + Number(s);
 }
+function youtubeEmbed(id, url){
+  const start = youtubeStart(url);
+  return `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&playsinline=1${start ? '&start='+start : ''}`;
+}
+// Works out how a lesson video should be played.
+//  { kind:'iframe', src, drive }  — Google Drive, YouTube, Vimeo or another web player
+//  { kind:'file', src }           — a direct video file (.mp4 etc.), played in the portal's own <video> player
+//  null                           — not a usable link
+function lessonVideoSource(url){
+  if(!url) return null;
+  url = String(url).trim();
+  if(!/^https?:\/\//i.test(url) || isDriveFolderLink(url)) return null;
+  const id = driveFileId(url);
+  if(id) return { kind:'iframe', src:`https://drive.google.com/file/d/${id}/preview`, drive:true }; // Google Drive's own player
+  let m = url.match(/youtube(?:-nocookie)?\.com\/(?:shorts|live|embed|v)\/([a-zA-Z0-9_-]{6,})/);
+  if(m) return { kind:'iframe', src:youtubeEmbed(m[1], url) };
+  m = url.match(/youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{6,})/);
+  if(m) return { kind:'iframe', src:youtubeEmbed(m[1], url) };
+  m = url.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/);
+  if(m) return { kind:'iframe', src:youtubeEmbed(m[1], url) };
+  m = url.match(/player\.vimeo\.com\/video\/(\d+)/) || url.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/([a-zA-Z0-9]+))?/);
+  if(m){
+    const h = m[2] || (url.match(/[?&]h=([a-zA-Z0-9]+)/)||[])[1];
+    return { kind:'iframe', src:`https://player.vimeo.com/video/${m[1]}${h ? '?h='+h : ''}` };
+  }
+  const gh = githubAudioSources(url); // same direct-file conversion works for video
+  if(gh && VIDEO_FILE_RE.test(gh[0])) return { kind:'file', src:gh[0] };
+  const dbx = dropboxDirect(url);
+  if(dbx && VIDEO_FILE_RE.test(dbx)) return { kind:'file', src:dbx };
+  if(VIDEO_FILE_RE.test(url)) return { kind:'file', src: url.replace(/^http:\/\//i,'https://') };
+  return { kind:'iframe', src:url };
+}
+// Kept for anything that still calls the old name.
+function toEmbeddableVideoUrl(url){ const s = lessonVideoSource(url); return s ? s.src : ''; }
+// Loads just the start of a lesson video to check this browser can show its picture.
+// Resolves 'ok', 'no-picture', 'error', or 'unknown' (YouTube/Vimeo, or couldn't tell in time).
+function probeVideoPicture(url){
+  return new Promise(resolve=>{
+    const src = lessonVideoSource(url);
+    if(!src) return resolve('error');
+    const sources = src.kind==='file' ? [src.src] : null; // Drive/YouTube/Vimeo use their own player
+    if(!sources) return resolve('unknown');
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    let i = 0, done = false, t = null;
+    const finish = r=>{ if(done) return; done = true; clearTimeout(t); v.removeAttribute('src'); v.load(); resolve(r); };
+    t = setTimeout(()=>finish('unknown'), 12000);
+    v.addEventListener('loadeddata', ()=>finish(v.videoWidth > 0 ? 'ok' : 'no-picture'));
+    v.addEventListener('error', ()=>{ if(done) return; if(++i < sources.length){ v.src = sources[i]; v.load(); } else finish('error'); });
+    v.src = sources[0]; v.load();
+  });
+}
+// Asks the admin before saving a lesson whose video won't show properly. Returns true to go ahead.
+async function confirmLessonVideo(url, btn){
+  const old = btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking video…'; }
+  const r = await probeVideoPicture(url);
+  if(btn){ btn.disabled = false; btn.innerHTML = old; }
+  if(r==='no-picture') return confirm('This video has sound, but its picture is saved in a format many browsers can\'t show (most likely HEVC/H.265, the default for many phone cameras). Students on Chrome, Android or Windows would see a black screen.\n\nFix: upload it to Google Drive and use the Drive link instead — Drive\'s player converts it automatically.\n\nSave this lesson anyway?');
+  if(r==='error') return confirm('The portal couldn\'t load this video. Check it is shared as "Anyone with the link" with downloading allowed, and that the Google Drive API is enabled for your key.\n\nSave this lesson anyway?');
+  return true;
+}
+// Problem with a video/audio link the admin typed, or '' if it looks fine.
+function mediaLinkProblem(itemType, url){
+  url = String(url||'').trim();
+  if(!/^https?:\/\//i.test(url)) return 'Please paste a full link that starts with https://';
+  if(isDriveFolderLink(url)) return 'This is a Google Drive folder link. Open the file itself in Drive, choose Share → Copy link, and paste that link.';
+  if(/docs\.google\.com\/(document|spreadsheets|presentation)\//i.test(url)) return 'This is a Google Docs/Sheets/Slides link, not a media file.';
+  if(itemType==='audio'){
+    if(isYouTubeLink(url)) return 'YouTube links can\'t be played as audio. Add it under Learning Lessons instead, or use a Google Drive / MP3 link.';
+    if(!audioSourceCandidates(url).length) return 'This audio link is not valid.';
+  } else if(!lessonVideoSource(url)) return 'This video link is not valid.';
+  return '';
+}
+
+/* =================================================================
+   LEARNING LESSONS — inline video viewer. Google Drive, YouTube and Vimeo
+   play in their own embedded player; direct video files (.mp4, .webm …)
+   play in the portal's own Sattva player.
+   ================================================================= */
+let lessonVideoWired = false;
+function showLessonVideoError(msg){
+  const el = document.getElementById('lessonVideoError');
+  if(!el) return;
+  el.textContent = msg || ''; el.hidden = !msg;
+}
+/* Google Drive videos and audio are streamed straight into the portal's own
+   players — Google Drive's player is never shown, and nothing opens in a new tab.
+   The best way to stream a Drive file is Google's official Drive API: it sends the
+   raw file with proper seeking support (needed by iPhones). It needs an API key
+   with "Google Drive API" switched on — the Firebase web key below works once the
+   API is enabled for this project (see the setup notes). The older Drive
+   download addresses are tried after it as backups. */
+const DRIVE_STREAM_API_KEY = firebaseConfig.apiKey;
+function driveStreamSources(id){
+  const list = [];
+  if(DRIVE_STREAM_API_KEY) list.push(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true&key=${DRIVE_STREAM_API_KEY}`);
+  list.push(`https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`);
+  list.push(`https://drive.google.com/uc?export=download&id=${id}&confirm=t`);
+  return list;
+}
+// Works out WHY a Drive file can't be streamed, in plain words, for admins.
+async function diagnoseDriveFile(id){
+  if(!DRIVE_STREAM_API_KEY) return 'No API key is set for streaming Google Drive files.';
+  try{
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true&key=${DRIVE_STREAM_API_KEY}`, { headers:{ Range:'bytes=0-1' } });
+    if(res.ok){
+      const type = res.headers.get('content-type') || '';
+      if(type && !/^(video|audio)\//i.test(type) && !/octet-stream/i.test(type)) return `The link opens a "${type}" file, not a video. Check you linked the right file.`;
+      return 'Google Drive is sending the file correctly, but this browser can\'t play its format. Convert it to MP4 (H.264 video + AAC audio) and upload it again.';
+    }
+    let reason = '', message = '';
+    try{ const j = await res.json(); const e = j.error || {}; message = e.message || ''; reason = ((e.errors||[])[0]||{}).reason || (e.details||[]).map(d=>d.reason).filter(Boolean)[0] || e.status || ''; }catch(e){}
+    const r = (reason + ' ' + message).toLowerCase();
+    if(/accessnotconfigured|service_disabled|has not been used|is disabled/.test(r)) return 'The Google Drive API is switched off for this Firebase project. In Google Cloud Console → APIs & Services → Library, search "Google Drive API" and click Enable, then wait a few minutes.';
+    const said = message ? ` (Google said: ${message})` : '';
+    if(/referer|referrer/.test(r)) return `The API key only works on certain websites, and this one (${location.host || 'a file on this computer'}) isn't on its list. In Google Cloud Console → APIs & Services → Credentials, open the key and under "Website restrictions" add ${location.host ? location.host + '/*' : 'your portal\'s address'}.` + said;
+    if(/api_key_service_blocked|service_blocked|are blocked/.test(r)) return 'The API key is limited to certain Google services and Google Drive isn\'t one of them. In Google Cloud Console → APIs & Services → Credentials, open the "Browser key (auto created by Firebase)", and under "API restrictions" tick "Google Drive API" in the list, then Save and wait 5 minutes.' + said;
+    if(/keyinvalid|api key not valid|api_key_invalid/.test(r)) return 'The API key isn\'t valid.' + said;
+    if(res.status===404 || /notfound/.test(r)) return 'Google Drive says this file doesn\'t exist or isn\'t public. Open the file in Drive → Share → General access → "Anyone with the link" (Viewer).';
+    if(/cannotdownload|downloadrestricted|forbidden/.test(r) || res.status===403) return 'Google Drive is blocking downloads of this file. In Drive → Share → ⚙ settings, tick "Viewers and commenters can see the option to download", and make sure access is "Anyone with the link".' + (message ? ` (Drive said: ${message})` : '');
+    if(res.status===429 || /ratelimit|quota/.test(r)) return 'Google Drive\'s daily limit for this file was reached. It should play again later.';
+    return `Google Drive refused the file (error ${res.status}${message ? ': ' + message : ''}).`;
+  }catch(err){
+    return 'Couldn\'t reach Google Drive. Check the internet connection and try again.';
+  }
+}
+let lessonVideoState = { sources:[], idx:0, driveId:'', timer:null, wantPlay:false };
+// Every way of loading the file failed: say so inside the player.
+async function lessonVideoFail(code){
+  clearTimeout(lessonVideoState.timer);
+  const driveId = lessonVideoState.driveId;
+  lessonVideoState.driveId = '';
+  const v = vpVideo();
+  v.pause(); v.removeAttribute('src'); v.load();
+  vpMessage('This video can\'t be played right now.', isRestrictedRole() ? 'Please try again later, or contact support if it keeps happening.' : 'Working out why…');
+  if(isRestrictedRole()) return;
+  let detail;
+  if(driveId) detail = await diagnoseDriveFile(driveId);
+  else detail = code===4
+    ? 'The browser can\'t play this video\'s format. Convert it to MP4 (H.264 video + AAC audio) and add it again.'
+    : 'The video file couldn\'t be loaded. Check that the link opens the file itself in a browser and that it is public.';
+  vpMessage('This video can\'t be played right now.', 'Admin: ' + detail);
+}
+// The file loaded but the browser can't draw its picture (only sound plays).
+// Almost always a video saved as HEVC/H.265 — the default for many phone cameras.
+function lessonVideoNoPicture(){
+  const v = vpVideo();
+  v.pause();
+  if(isRestrictedRole()){
+    vpMessage('This video can\'t be shown on this device.', 'Please try another device, or contact support so the video can be fixed.');
+  } else {
+    vpMessage('Only the sound of this video can play here.', 'Admin: the picture is saved in a format this browser can\'t show (most likely HEVC/H.265, the default for many phone cameras). Upload it to Google Drive and use the Drive link instead — Drive\'s player converts it automatically.');
+  }
+}
+function lessonVideoTryNext(){
+  clearTimeout(lessonVideoState.timer);
+  const v = vpVideo();
+  if(lessonVideoState.idx + 1 < lessonVideoState.sources.length){
+    lessonVideoState.idx++;
+    v.src = lessonVideoState.sources[lessonVideoState.idx]; v.load();
+    if(lessonVideoState.wantPlay){ v.play().catch(()=>{}); armLessonVideoTimer(); }
+    return true;
+  }
+  return false;
+}
+// Once play is pressed, give the file 15 seconds to start; if it hasn't and
+// there's another way to load it, try that. (Not started before play: iPhones
+// don't load a video until it's played.) On the last way, just keep waiting.
+function armLessonVideoTimer(){
+  clearTimeout(lessonVideoState.timer);
+  if(lessonVideoState.idx + 1 >= lessonVideoState.sources.length) return;
+  lessonVideoState.timer = setTimeout(()=>{
+    const v = vpVideo();
+    if(v && v.readyState < 2) lessonVideoTryNext();
+  }, 15000);
+}
+function wireLessonVideo(){
+  lessonVideoWired = true;
+  wireVideoPlayer();
+  const v = document.getElementById('lessonViewerVideo');
+  if(!v) return;
+  v.addEventListener('play', ()=>{ lessonVideoState.wantPlay = true; vpMessage(''); if(v.readyState < 2) armLessonVideoTimer(); });
+  ['loadeddata','canplay','playing'].forEach(ev=>v.addEventListener(ev, ()=>clearTimeout(lessonVideoState.timer)));
+  // Picture check: once real frames are available, a video with no width/height has no picture this browser can show.
+  const pictureCheck = ()=>{ if(v.getAttribute('src') && v.readyState >= 2 && v.videoWidth === 0 && v.videoHeight === 0) lessonVideoNoPicture(); };
+  v.addEventListener('loadeddata', pictureCheck);
+  v.addEventListener('playing', ()=>setTimeout(pictureCheck, 600));
+  v.addEventListener('error', ()=>{
+    if(!v.getAttribute('src')) return;
+    console.warn('Lesson video failed:', v.currentSrc.replace(/key=[^&]+/,'key=…'), v.error && v.error.code);
+    if(lessonVideoTryNext()) return;
+    lessonVideoFail(v.error && v.error.code);
+  });
+}
+/* =================================================================
+   SATTVA VIDEO PLAYER — our own controls on top of the browser's
+   <video> (used for Google Drive files and direct .mp4 links).
+   Tap/click to show controls, they hide after a few seconds of play;
+   double-tap the left/right side to skip 10 seconds; keyboard:
+   Space/K play, ←/→ 10s, F full screen, M mute.
+   ================================================================= */
+let vpWired = false, vpHideTimer = null, vpPointerOnBar = false;
+const vpQ = id => document.getElementById(id);
+function vpShow(on){ const r = vpQ('vpRoot'); if(r) r.hidden = !on; }
+function vpMessage(title, detail, action){
+  const el = vpQ('vpMsg'); if(!el) return;
+  if(!title){ el.hidden = true; el.innerHTML = ''; return; }
+  el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><strong>${escapeHtml(title)}</strong>${detail ? `<span>${escapeHtml(detail)}</span>` : ''}${action ? `<button type="button" class="btn btn-primary" style="margin-top:.5rem;">${action.icon ? `<i class="fa-solid ${action.icon}"></i> ` : ''}${escapeHtml(action.label)}</button>` : ''}`;
+  if(action) el.querySelector('button').onclick = action.onClick;
+  el.hidden = false;
+  vpQ('vpRoot').classList.remove('is-playing','is-loading','ui-hidden');
+}
+function vpVideo(){ return vpQ('lessonViewerVideo'); }
+function vpHasDuration(v){ return isFinite(v.duration) && v.duration > 0; }
+function vpRenderTime(){
+  const v = vpVideo();
+  vpQ('vpTime').innerHTML = `${formatAudioTime(v.currentTime)} <span>/ ${vpHasDuration(v) ? formatAudioTime(v.duration) : '--:--'}</span>`;
+}
+function vpSetUi(show){
+  const root = vpQ('vpRoot'), v = vpVideo();
+  if(!root) return;
+  clearTimeout(vpHideTimer);
+  root.classList.toggle('ui-hidden', !show);
+  if(show && !v.paused){
+    vpHideTimer = setTimeout(()=>{ if(!v.paused && !vpPointerOnBar) root.classList.add('ui-hidden'); }, 2800);
+  }
+}
+function vpTogglePlay(){
+  const v = vpVideo();
+  if(!v.getAttribute('src')) return;
+  if(v.paused || v.ended){
+    if(v.ended) v.currentTime = 0;
+    v.play().catch(err=>{ if(err && err.name==='NotAllowedError') showToast('Tap play again to start the video.', true); });
+  } else v.pause();
+}
+function vpSkip(delta, ripple){
+  const v = vpVideo();
+  if(!v.getAttribute('src') || v.readyState < 1) return;
+  let t = v.currentTime + delta;
+  if(vpHasDuration(v)) t = Math.min(v.duration - 0.1, t);
+  v.currentTime = Math.max(0, t);
+  if(ripple){
+    const el = vpQ(delta < 0 ? 'vpRippleL' : 'vpRippleR');
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
+  vpSetUi(true);
+}
+function vpSetPlayIcons(playing){
+  const icon = playing ? 'fa-pause' : 'fa-play';
+  vpQ('vpPlay').innerHTML = `<i class="fa-solid ${icon}"></i>`;
+  vpQ('vpPlay').setAttribute('aria-label', playing ? 'Pause' : 'Play');
+}
+// Called each time a lesson opens in our player.
+function vpReset(title, meta){
+  const root = vpQ('vpRoot'), v = vpVideo();
+  root.classList.remove('is-playing','is-loading','ui-hidden');
+  clearTimeout(vpHideTimer);
+  vpMessage('');
+  vpQ('vpTitle').innerHTML = `${escapeHtml(title||'Lesson Video')}${meta ? `<small>${escapeHtml(meta)}</small>` : ''}`;
+  vpQ('vpBig').innerHTML = '<i class="fa-solid fa-play"></i>'; vpQ('vpBig').setAttribute('aria-label','Play');
+  vpSetPlayIcons(false);
+  const seek = vpQ('vpSeek'); seek.value = 0; seek.style.setProperty('--vp-progress','0%'); seek.style.setProperty('--vp-buffer','0%');
+  vpQ('vpSpeed').value = '1'; v.defaultPlaybackRate = 1; v.playbackRate = 1;
+  vpQ('vpTime').innerHTML = '0:00 <span>/ --:--</span>';
+}
+function vpUpdateFsIcon(isFull){
+  const b = vpQ('vpFs'); if(!b) return;
+  b.innerHTML = `<i class="fa-solid ${isFull ? 'fa-compress' : 'fa-expand'}"></i>`;
+  b.setAttribute('aria-label', isFull ? 'Exit full screen' : 'Full screen');
+}
+function wireVideoPlayer(){
+  if(vpWired) return;
+  vpWired = true;
+  const root = vpQ('vpRoot'), v = vpVideo(), seek = vpQ('vpSeek'), tap = vpQ('vpTap'), bar = vpQ('vpBar');
+  let seeking = false;
+
+  // ---- video events ----
+  v.addEventListener('play', ()=>{
+    root.classList.add('is-playing'); vpSetPlayIcons(true);
+    if(v.readyState < 3) root.classList.add('is-loading');
+    vpSetUi(true);
+  });
+  v.addEventListener('pause', ()=>{ root.classList.remove('is-playing','is-loading'); vpSetPlayIcons(false); vpSetUi(true); });
+  v.addEventListener('ended', ()=>{
+    root.classList.remove('is-playing','is-loading'); vpSetPlayIcons(false);
+    vpQ('vpBig').innerHTML = '<i class="fa-solid fa-rotate-right"></i>'; vpQ('vpBig').setAttribute('aria-label','Play again');
+    vpSetUi(true);
+  });
+  v.addEventListener('waiting', ()=>{ if(!v.paused) root.classList.add('is-loading'); });
+  ['playing','canplay','seeked','error','emptied'].forEach(ev=>v.addEventListener(ev, ()=>root.classList.remove('is-loading')));
+  v.addEventListener('playing', ()=>{ vpQ('vpBig').innerHTML = '<i class="fa-solid fa-play"></i>'; });
+  ['loadedmetadata','durationchange'].forEach(ev=>v.addEventListener(ev, vpRenderTime));
+  v.addEventListener('timeupdate', ()=>{
+    if(seeking) return;
+    const pct = vpHasDuration(v) ? v.currentTime / v.duration * 100 : 0;
+    seek.value = pct; seek.style.setProperty('--vp-progress', pct + '%');
+    vpRenderTime();
+  });
+  v.addEventListener('progress', ()=>{
+    if(!vpHasDuration(v) || !v.buffered.length) return;
+    let end = 0;
+    for(let i=0;i<v.buffered.length;i++){ if(v.buffered.start(i) <= v.currentTime + 0.5) end = Math.max(end, v.buffered.end(i)); }
+    seek.style.setProperty('--vp-buffer', Math.min(100, end / v.duration * 100) + '%');
+  });
+  v.addEventListener('volumechange', ()=>{
+    const vol = v.muted ? 0 : v.volume;
+    vpQ('vpMute').innerHTML = `<i class="fa-solid ${vol===0 ? 'fa-volume-xmark' : vol < .5 ? 'fa-volume-low' : 'fa-volume-high'}"></i>`;
+    vpQ('vpMute').setAttribute('aria-label', vol===0 ? 'Unmute' : 'Mute');
+    vpQ('vpVolume').value = vol; vpQ('vpVolume').style.setProperty('--vp-vol', vol*100 + '%');
+  });
+  v.addEventListener('contextmenu', e=>e.preventDefault());
+
+  // ---- controls ----
+  vpQ('vpBig').addEventListener('click', vpTogglePlay);
+  vpQ('vpPlay').addEventListener('click', vpTogglePlay);
+  vpQ('vpBack').addEventListener('click', ()=>vpSkip(-10));
+  vpQ('vpFwd').addEventListener('click', ()=>vpSkip(10));
+  vpQ('vpFs').addEventListener('click', ()=>toggleFullscreenPanel('lessonViewerPanel'));
+  vpQ('vpSpeed').addEventListener('change', e=>{ const r = Number(e.target.value)||1; v.defaultPlaybackRate = r; v.playbackRate = r; vpSetUi(true); });
+  vpQ('vpMute').addEventListener('click', ()=>{ v.muted = !v.muted; if(!v.muted && v.volume===0) v.volume = 1; });
+  vpQ('vpVolume').addEventListener('input', e=>{ v.volume = Number(e.target.value); v.muted = v.volume===0; });
+  seek.addEventListener('input', ()=>{
+    seeking = true; vpSetUi(true);
+    seek.style.setProperty('--vp-progress', seek.value + '%');
+    if(vpHasDuration(v)) vpQ('vpTime').innerHTML = `${formatAudioTime(seek.value/100*v.duration)} <span>/ ${formatAudioTime(v.duration)}</span>`;
+  });
+  seek.addEventListener('change', ()=>{ if(vpHasDuration(v)) v.currentTime = seek.value/100*v.duration; seeking = false; vpSetUi(true); });
+  // Keep the controls up while a finger or mouse is on the control bar.
+  bar.addEventListener('pointerenter', e=>{ if(e.pointerType==='mouse'){ vpPointerOnBar = true; vpSetUi(true); } });
+  bar.addEventListener('pointerleave', e=>{ if(e.pointerType==='mouse'){ vpPointerOnBar = false; vpSetUi(true); } });
+  bar.addEventListener('pointerdown', ()=>vpSetUi(true));
+  root.addEventListener('pointermove', e=>{ if(e.pointerType==='mouse') vpSetUi(true); });
+  root.addEventListener('pointerleave', e=>{ if(e.pointerType==='mouse' && !v.paused){ vpPointerOnBar = false; clearTimeout(vpHideTimer); root.classList.add('ui-hidden'); } });
+
+  // ---- tapping the picture ----
+  // Mouse: click = play/pause, double-click = full screen.
+  // Touch: tap = show/hide controls, double-tap left/right = 10s back/forward, double-tap middle = play/pause.
+  let lastTap = 0, singleTapTimer = null;
+  tap.addEventListener('pointerup', e=>{
+    if(e.pointerType === 'mouse'){
+      if(e.button !== 0) return;
+      const now = Date.now();
+      if(now - lastTap < 300){ clearTimeout(singleTapTimer); lastTap = 0; toggleFullscreenPanel('lessonViewerPanel'); return; }
+      lastTap = now;
+      singleTapTimer = setTimeout(()=>{ vpTogglePlay(); vpSetUi(true); }, 220);
+      return;
+    }
+    const rect = tap.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const now = Date.now();
+    if(now - lastTap < 300){
+      clearTimeout(singleTapTimer); lastTap = 0;
+      if(x < .36) vpSkip(-10, true); else if(x > .64) vpSkip(10, true); else vpTogglePlay();
+      return;
+    }
+    lastTap = now;
+    singleTapTimer = setTimeout(()=>{
+      if(v.paused) vpSetUi(true);
+      else vpSetUi(root.classList.contains('ui-hidden'));
+    }, 300);
+  });
+
+  // ---- keyboard ----
+  document.addEventListener('keydown', e=>{
+    if(root.hidden || !document.getElementById('page-lessonViewer').classList.contains('active')) return;
+    if(e.target.closest && e.target.closest('input,select,textarea,[contenteditable]')) return;
+    if(document.getElementById('modalOverlay').classList.contains('show')) return;
+    const k = e.key.toLowerCase();
+    if(k===' ' || k==='k'){ e.preventDefault(); vpTogglePlay(); vpSetUi(true); }
+    else if(k==='arrowleft' || k==='j'){ e.preventDefault(); vpSkip(-10, true); }
+    else if(k==='arrowright' || k==='l'){ e.preventDefault(); vpSkip(10, true); }
+    else if(k==='f'){ e.preventDefault(); toggleFullscreenPanel('lessonViewerPanel'); }
+    else if(k==='m'){ e.preventDefault(); v.muted = !v.muted; vpSetUi(true); }
+  });
+
+  // iPhone/iPad ignore volume set from a web page — hide the volume control there.
+  if(/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1)) root.classList.add('no-volume');
+}
+
 function viewLessonVideo(moduleKey, id){
   if(inFullscreenMode()) exitFullscreenMode();
   ensureBackGuardSoon();
@@ -6333,13 +7006,34 @@ function viewLessonVideo(moduleKey, id){
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
+  if(!lessonVideoWired) wireLessonVideo();
+  stopMediaPlayback();
   recordMaterialOpen(cfg, row);
   document.getElementById('lessonViewerTitle').textContent = row.name || 'Lesson Video';
-  document.getElementById('lessonViewerMeta').textContent = [row.board, row.className, row.subjectName, row.chapterName, row.topicName, row.subtopic].filter(Boolean).join(' • ');
-  const embedUrl = toEmbeddableVideoUrl(row.videoUrl);
-  const isDrive = embedUrl.includes('drive.google.com');
-  document.getElementById('lessonVideoWrap').classList.toggle('is-drive', isDrive);
-  document.getElementById('lessonViewerFrame').src = embedUrl || '';
+  document.getElementById('lessonViewerMeta').textContent = [row.board, row.className, subjectDisplayName(row.subjectId)||row.subjectName, row.chapterName, row.topicName, row.subtopic].filter(Boolean).join(' • ');
+  const src = lessonVideoSource(row.videoUrl);
+  const lessonVideoMeta = [subjectDisplayName(row.subjectId)||row.subjectName, row.chapterName].filter(Boolean).join(' • ');
+  const wrap = document.getElementById('lessonVideoWrap');
+  const frame = document.getElementById('lessonViewerFrame');
+  const video = document.getElementById('lessonViewerVideo');
+  showLessonVideoError('');
+  wrap.classList.remove('is-drive');
+  if(!src){
+    frame.hidden = true; vpShow(false);
+    showLessonVideoError(isDriveFolderLink(row.videoUrl)
+      ? 'This lesson points to a Google Drive folder instead of a video file. Please ask your admin to fix the link.'
+      : 'This lesson\'s video link is not valid. Please ask your admin to check it.');
+  } else if(src.kind==='file'){
+    lessonVideoState = { sources: [src.src], idx:0, driveId:'', timer:null, wantPlay:false, ref:{ moduleKey, id } };
+    frame.hidden = true; frame.src = 'about:blank';
+    vpReset(row.name, lessonVideoMeta); vpShow(true); video.src = src.src; video.load();
+  } else {
+    // Google Drive, YouTube and Vimeo play in their own player. For Drive the
+    // toolbar strip at the top (file name, pop-out button) is cropped off.
+    vpShow(false);
+    wrap.classList.toggle('is-drive', !!src.drive);
+    frame.hidden = false; frame.src = src.src;
+  }
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-lessonViewer').classList.add('active');
   document.getElementById('sidebar').classList.remove('open');
@@ -6355,24 +7049,32 @@ function viewLessonVideo(moduleKey, id){
 function driveFileId(url){
   if(!url) return '';
   url = String(url).trim();
-  let m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if(!/(?:drive|docs)\.google\.com|drive\.usercontent\.google\.com/i.test(url)) return '';
+  let m = url.match(/\/file\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/);
   if(m) return m[1];
-  m = /drive\.google\.com|drive\.usercontent\.google\.com/.test(url) && url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   return m ? m[1] : '';
+}
+// Dropbox share links (…?dl=0) open a web page; ?raw=1 serves the file itself.
+function dropboxDirect(url){
+  let u;
+  try{ u = new URL(url); }catch(e){ return ''; }
+  if(!/(^|\.)dropbox\.com$/i.test(u.hostname)) return '';
+  u.searchParams.delete('dl'); u.searchParams.set('raw','1');
+  return u.toString();
 }
 // Addresses to try, in order. Google Drive changed how direct downloads work,
 // so its current address is tried first, then the older one.
 function audioSourceCandidates(url){
   if(!url) return [];
-  url = url.trim();
+  url = String(url).trim();
+  if(!/^https?:\/\//i.test(url) || isDriveFolderLink(url) || isYouTubeLink(url)) return [];
   const id = driveFileId(url);
-  if(id) return [
-    `https://drive.usercontent.google.com/download?id=${id}&export=download`,
-    `https://drive.google.com/uc?export=download&id=${id}`
-  ];
+  if(id) return driveStreamSources(id); // Drive API first, then Drive's download addresses
   const gh = githubAudioSources(url);
   if(gh) return gh;
-  if(!/^https?:\/\//i.test(url)) return [];
+  const dbx = dropboxDirect(url);
+  if(dbx) return [dbx];
   // The portal runs on https, so an http:// audio link is blocked. Load it over https.
   if(/^http:\/\//i.test(url)) return ['https://' + url.slice(7), url];
   return [url];
@@ -6384,7 +7086,8 @@ function githubAudioSources(url){
   let u;
   try{ u = new URL(url); }catch(e){ return null; }
   const host = u.hostname.toLowerCase();
-  const parts = u.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+  let parts;
+  try{ parts = u.pathname.split('/').filter(Boolean).map(decodeURIComponent); }catch(e){ return null; }
   let owner, repo, rest;
   if(host==='github.com' || host==='www.github.com'){
     // github.com/OWNER/REPO/blob|raw/BRANCH/PATH
@@ -6406,33 +7109,39 @@ function githubAudioSources(url){
 function toEmbeddablePlayableUrl(url){ return audioSourceCandidates(url)[0] || ''; }
 function formatAudioTime(sec){
   if(!isFinite(sec) || sec < 0) sec = 0;
-  const m = Math.floor(sec/60), s = Math.floor(sec%60);
-  return `${m}:${String(s).padStart(2,'0')}`;
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
 }
 let audioPlayerWired = false;
-let audioState = { sources:[], idx:0, driveId:'', fellBack:false };
+let audioState = { sources:[], idx:0, driveId:'', fellBack:false, wantPlay:false };
 function showAudioError(msg){
   const el = document.getElementById('apErrorMsg');
   el.textContent = msg; el.hidden = false;
 }
 // Direct playback failed: try the next address, then Google Drive's own player.
+// Only the audio element's 'error' event calls this, so a failure is counted once
+// (before, a rejected play() also called it and one address was skipped).
 function audioTryNextSource(){
   const audioEl = document.getElementById('audioPlayerEl');
   if(audioState.idx + 1 < audioState.sources.length){
     audioState.idx++;
     audioEl.src = audioState.sources[audioState.idx];
-    audioEl.load();
+    audioEl.defaultPlaybackRate = audioEl.playbackRate = Number(document.getElementById('apSpeed').value) || 1;
+    audioEl.load(); // 'canplay' resumes playback if the student had pressed play
     return;
   }
-  if(audioState.driveId && !audioState.fellBack){
-    audioState.fellBack = true;
+  audioState.wantPlay = false;
+  if(audioState.driveId){
+    // Drive file couldn't be streamed. Never fall back to Drive's player:
+    // students get a short message, admins get the exact reason.
+    const id = audioState.driveId;
     audioEl.removeAttribute('src'); audioEl.load();
-    document.getElementById('audioPlayerCard').hidden = true;
-    document.getElementById('apDriveFrame').src = `https://drive.google.com/file/d/${audioState.driveId}/preview`;
-    document.getElementById('apDriveFallback').hidden = false;
+    if(isRestrictedRole()){ showAudioError('This audio can\'t be played right now. Please try again later, or contact support if it keeps happening.'); return; }
+    showAudioError('This audio can\'t be played right now. Working out why…');
+    diagnoseDriveFile(id).then(d=>{ if(audioState.driveId===id) showAudioError('Admin: ' + d); });
     return;
   }
-  const code = (document.getElementById('audioPlayerEl').error || {}).code || audioState.lastErrorCode;
+  const code = (audioEl.error || {}).code || audioState.lastErrorCode;
   if(code === 4 && !audioState.driveId){
     showAudioError('This audio file was found, but the browser cannot play its format. Convert it to MP3 (or AAC .m4a) and upload it again.');
     return;
@@ -6449,30 +7158,39 @@ function viewAudioLesson(moduleKey, id){
   const cfg = RESOURCE_MODULES[moduleKey];
   const row = cfg.rows.find(r=>r.id===id);
   if(!row) return;
+  if(!audioPlayerWired) wireAudioPlayer();
+  stopMediaPlayback();
   recordMaterialOpen(cfg, row);
   document.getElementById('audioViewerTitle').textContent = row.name || 'Audio Explanation';
-  document.getElementById('audioViewerMeta').textContent = [row.board, row.className, row.subjectName, row.chapterName, row.topicName, row.subtopic].filter(Boolean).join(' • ');
+  document.getElementById('audioViewerMeta').textContent = [row.board, row.className, subjectDisplayName(row.subjectId)||row.subjectName, row.chapterName, row.topicName, row.subtopic].filter(Boolean).join(' • ');
   document.getElementById('apTitle').textContent = row.name || 'Untitled';
   const audioEl = document.getElementById('audioPlayerEl');
   const card = document.getElementById('audioPlayerCard');
   card.classList.remove('is-playing');
   audioEl.pause();
-  if(!audioPlayerWired) wireAudioPlayer();
-  audioState = { sources: audioSourceCandidates(row.audioUrl), idx: 0, driveId: driveFileId(row.audioUrl), fellBack: false };
+  audioState = { sources: audioSourceCandidates(row.audioUrl), idx: 0, driveId: driveFileId(row.audioUrl), fellBack: false, wantPlay: false };
   card.hidden = false;
   document.getElementById('apDriveFallback').hidden = true;
   document.getElementById('apDriveFrame').src = 'about:blank';
   document.getElementById('apErrorMsg').hidden = true;
-  if(!audioState.sources.length){ showAudioError('This audio link is not valid. Please ask your admin to check it.'); }
+  document.getElementById('apSpeed').value = '1';
+  audioEl.defaultPlaybackRate = 1; audioEl.playbackRate = 1;
+  if(!audioState.sources.length){
+    audioEl.removeAttribute('src'); audioEl.load();
+    showAudioError(isYouTubeLink(row.audioUrl)
+      ? 'This audio points to a YouTube video, which can\'t be played as audio. Please ask your admin to fix the link.'
+      : 'This audio link is not valid. Please ask your admin to check it.');
+  }
   else { audioEl.src = audioState.sources[0]; audioEl.load(); }
   document.getElementById('apSeek').value = 0;
   document.getElementById('apSeek').style.setProperty('--ap-progress', '0%');
   document.getElementById('apCurrentTime').textContent = '0:00';
   document.getElementById('apDuration').textContent = '0:00';
   document.getElementById('apPlayBtn').innerHTML = '<i class="fa-solid fa-play"></i>';
-  document.getElementById('apSpeed').value = '1';
-  audioEl.playbackRate = 1;
-  if(!audioPlayerWired) wireAudioPlayer();
+  document.getElementById('apPlayBtn').setAttribute('aria-label','Play');
+  if('mediaSession' in navigator){
+    try{ navigator.mediaSession.metadata = new MediaMetadata({ title: row.name || 'Audio Explanation', artist: subjectDisplayName(row.subjectId)||row.subjectName||'', album: 'Sri Hari Sattva Jnana' }); }catch(e){}
+  }
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-audioViewer').classList.add('active');
   document.getElementById('sidebar').classList.remove('open');
@@ -6490,27 +7208,40 @@ function wireAudioPlayer(){
   const volIcon = document.getElementById('apVolIcon');
   const speed = document.getElementById('apSpeed');
   let seeking = false;
+  const hasDuration = ()=> isFinite(audioEl.duration) && audioEl.duration > 0;
+  const setPlayIcon = (playing)=>{
+    playBtn.innerHTML = playing ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
+    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  };
+  const tryPlay = ()=>{
+    if(!audioEl.getAttribute('src')) return; // nothing loaded (bad link) — the message is already shown
+    audioState.wantPlay = true;
+    audioEl.play().catch(err=>{
+      if(err && err.name==='NotAllowedError'){ audioState.wantPlay = false; showToast('Tap play again to start the audio.', true); }
+      // AbortError (address changed) / NotSupportedError: the 'error' event handles moving on.
+    });
+  };
 
   playBtn.addEventListener('click', ()=>{
-    if(audioEl.paused) audioEl.play().catch(err=>{
-      if(err && err.name==='NotAllowedError') showToast('Tap play again to start the audio.', true);
-      else audioTryNextSource();
-    });
-    else audioEl.pause();
+    if(audioEl.paused) tryPlay();
+    else { audioState.wantPlay = false; audioEl.pause(); }
   });
-  audioEl.addEventListener('play', ()=>{ playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>'; card.classList.add('is-playing'); });
-  audioEl.addEventListener('pause', ()=>{ playBtn.innerHTML = '<i class="fa-solid fa-play"></i>'; card.classList.remove('is-playing'); });
-  audioEl.addEventListener('ended', ()=>{ playBtn.innerHTML = '<i class="fa-solid fa-play"></i>'; card.classList.remove('is-playing'); });
+  audioEl.addEventListener('canplay', ()=>{ if(audioState.wantPlay && audioEl.paused) audioEl.play().catch(()=>{}); });
+  audioEl.addEventListener('play', ()=>{ setPlayIcon(true); card.classList.add('is-playing'); });
+  audioEl.addEventListener('pause', ()=>{ setPlayIcon(false); card.classList.remove('is-playing'); });
+  audioEl.addEventListener('ended', ()=>{ audioState.wantPlay = false; setPlayIcon(false); card.classList.remove('is-playing'); });
   audioEl.addEventListener('error', ()=>{
     if(!audioEl.getAttribute('src')) return;
     audioState.lastErrorCode = audioEl.error && audioEl.error.code;
     console.warn('Audio failed:', audioEl.currentSrc, audioEl.error && audioEl.error.code, audioEl.error && audioEl.error.message);
     audioTryNextSource();
   });
-  audioEl.addEventListener('loadedmetadata', ()=>{ durEl.textContent = formatAudioTime(audioEl.duration); });
+  const showDuration = ()=>{ durEl.textContent = hasDuration() ? formatAudioTime(audioEl.duration) : '--:--'; };
+  audioEl.addEventListener('loadedmetadata', showDuration);
+  audioEl.addEventListener('durationchange', showDuration);
   audioEl.addEventListener('timeupdate', ()=>{
     if(seeking) return;
-    const pct = audioEl.duration ? (audioEl.currentTime/audioEl.duration)*100 : 0;
+    const pct = hasDuration() ? (audioEl.currentTime/audioEl.duration)*100 : 0;
     seek.value = pct;
     seek.style.setProperty('--ap-progress', pct+'%');
     curTimeEl.textContent = formatAudioTime(audioEl.currentTime);
@@ -6518,21 +7249,77 @@ function wireAudioPlayer(){
   seek.addEventListener('input', ()=>{
     seeking = true;
     seek.style.setProperty('--ap-progress', seek.value+'%');
-    if(audioEl.duration) curTimeEl.textContent = formatAudioTime((seek.value/100)*audioEl.duration);
+    if(hasDuration()) curTimeEl.textContent = formatAudioTime((seek.value/100)*audioEl.duration);
   });
   seek.addEventListener('change', ()=>{
-    if(audioEl.duration) audioEl.currentTime = (seek.value/100)*audioEl.duration;
+    if(hasDuration()) audioEl.currentTime = (seek.value/100)*audioEl.duration;
     seeking = false;
   });
-  document.getElementById('apSkipBack').addEventListener('click', ()=>{ audioEl.currentTime = Math.max(0, audioEl.currentTime-10); });
-  document.getElementById('apSkipFwd').addEventListener('click', ()=>{ audioEl.currentTime = Math.min(audioEl.duration||Infinity, audioEl.currentTime+10); });
+  const skip = (delta)=>{
+    if(!audioEl.getAttribute('src') || audioEl.readyState < 1) return;
+    let t = audioEl.currentTime + delta;
+    if(hasDuration()) t = Math.min(audioEl.duration, t);
+    audioEl.currentTime = Math.max(0, t);
+  };
+  document.getElementById('apSkipBack').addEventListener('click', ()=>skip(-10));
+  document.getElementById('apSkipFwd').addEventListener('click', ()=>skip(10));
   volume.addEventListener('input', ()=>{
     audioEl.volume = Number(volume.value);
     volume.style.setProperty('--ap-vol', (volume.value*100)+'%');
     volIcon.className = 'fa-solid ' + (volume.value==0?'fa-volume-xmark':volume.value<0.5?'fa-volume-low':'fa-volume-high');
   });
-  speed.addEventListener('change', ()=>{ audioEl.playbackRate = Number(speed.value); });
+  // iPhone/iPad ignore volume set from a web page (only the side buttons work), so hide the slider there.
+  if(/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1)){
+    const vw = volume.closest('.ap-volume-wrap'); if(vw) vw.style.display = 'none';
+  }
+  // A load() resets playbackRate to defaultPlaybackRate, so set both.
+  speed.addEventListener('change', ()=>{ const r = Number(speed.value) || 1; audioEl.defaultPlaybackRate = r; audioEl.playbackRate = r; });
+  // Lock-screen / headset controls on phones.
+  if('mediaSession' in navigator){
+    try{
+      navigator.mediaSession.setActionHandler('play', tryPlay);
+      navigator.mediaSession.setActionHandler('pause', ()=>{ audioState.wantPlay = false; audioEl.pause(); });
+      navigator.mediaSession.setActionHandler('seekbackward', ()=>skip(-10));
+      navigator.mediaSession.setActionHandler('seekforward', ()=>skip(10));
+    }catch(e){}
+  }
 }
+
+// Fix the name or link of a lesson video / audio without deleting and re-adding it.
+window.editMediaItem = function(moduleKey, id){
+  const cfg = RESOURCE_MODULES[moduleKey];
+  const row = cfg && cfg.rows.find(r=>r.id===id);
+  if(!row || isReadOnlyForModule(moduleKey)) return;
+  const isVideo = cfg.itemType==='video';
+  const urlKey = isVideo ? 'videoUrl' : 'audioUrl';
+  modalCtx = { key:moduleKey, editId:id };
+  document.getElementById('modalTitle').textContent = isVideo ? 'Edit Lesson' : 'Edit Audio Explanation';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="f-group"><label class="f-label">${isVideo?'Lesson Name':'Audio Name'}</label>
+      <input class="f-input" style="padding-left:.9rem;" id="emName" value="${escapeAttr(row.name||'')}"></div>
+    <div class="f-group"><label class="f-label">${isVideo?'Video Link (Google Drive, YouTube, Vimeo or .mp4)':'Audio Link (Google Drive or direct MP3 URL)'}</label>
+      <input class="f-input" style="padding-left:.9rem;" id="emUrl" value="${escapeAttr(row[urlKey]||'')}">
+      <p style="font-size:.72rem;color:var(--text-3);margin-top:.35rem;">For Google Drive, share the file as "Anyone with the link can view".</p></div>`;
+  document.getElementById('modalOverlay').classList.add('show');
+  document.getElementById('modalBox').classList.remove('wide');
+  const btn = document.getElementById('modalSaveBtn');
+  btn.style.display=''; btn.textContent='Save'; document.getElementById('modalCancelBtn').textContent='Cancel';
+  btn.onclick = async ()=>{
+    const name = document.getElementById('emName').value.trim();
+    const url = document.getElementById('emUrl').value.trim();
+    if(!name){ showToast('Please enter a name.', true); return; }
+    const problem = mediaLinkProblem(cfg.itemType, url);
+    if(problem){ showToast(problem, true); return; }
+    if(isVideo && url !== (row[urlKey]||'') && !(await confirmLessonVideo(url, btn))) return;
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try{
+      await updateDoc(doc(db, cfg.collection, id), { name, [urlKey]: url, updatedAt: new Date().toISOString() });
+      showToast('Saved.');
+      closeModal();
+    }catch(err){ showToast(err.message, true); }
+    finally{ btn.disabled = false; btn.textContent = 'Save'; }
+  };
+};
 
 // Replace the HTML of an existing material, keeping its name and place.
 window.replaceResourceFile = function(moduleKey, id){
@@ -6784,6 +7571,7 @@ function refreshOpenModalFilters(){
   const cfg = ENTITIES[modalCtx.key];
   if(!cfg) return;
   cfg.fields.forEach(f=>{ if((f.type==='relation'||f.type==='multiselect') && f.filterBy) applyFieldFilter(f); });
+  if(modalCtx.key==='schools' && modalCtx.editId) refreshSchoolLoginList(modalCtx.editId); // logins added/changed elsewhere
 }
 
 /* =================================================================
@@ -6898,6 +7686,8 @@ function stopProgressTracking(){
 function refreshProgressViews(){
   const pg = document.getElementById('page-myProgress');
   if(pg && pg.classList.contains('active')) renderMyProgress();
+  const sp = document.getElementById('page-studentProgress');
+  if(sp && sp.classList.contains('active') && isSchoolRole()) renderStudentProgressPage();
   Object.values(RESOURCE_MODULES).forEach(cfg=>{ if(cfg.live && resourcePageActive(cfg)) renderResourceBrowser(cfg); });
 }
 async function setChapterCompleted(section, subjectId, chapterId, done){
@@ -7250,9 +8040,19 @@ async function loadAdminProgress(){
   adminProgressLoading = true; adminProgressError = null;
   renderStudentProgressPage();
   try{
-    const snap = await getDocs(collection(db, 'progress'));
     const map = {};
-    snap.forEach(d=>{ map[d.id] = (d.data() && d.data().completed) || {}; });
+    if(isSchoolRole()){
+      const ids = (entityCache.students || []).map(s=>s.id);
+      let denied = 0;
+      await Promise.all(ids.map(async id=>{
+        try{ const snap = await getDoc(doc(db, 'progress', id)); map[id] = snap.exists() ? (snap.data().completed || {}) : {}; }
+        catch(e){ denied++; map[id] = {}; }
+      }));
+      if(ids.length && denied === ids.length) throw new Error('Progress records were refused. Make sure the updated Firestore rules are published.');
+    } else {
+      const snap = await getDocs(collection(db, 'progress'));
+      snap.forEach(d=>{ map[d.id] = (d.data() && d.data().completed) || {}; });
+    }
     adminProgressDocs = map;
   }catch(err){ console.warn('load progress', err); adminProgressError = err; }
   adminProgressLoading = false;
@@ -7277,14 +8077,16 @@ function miniBar(d){
 function renderStudentProgressPage(){
   ensureBackGuardSoon();
   const page = document.getElementById('page-studentProgress');
-  if(!page || isRestrictedRole()) return;
+  if(!page || (isRestrictedRole() && !isSchoolRole())) return;
   if(!page.classList.contains('active')) return;
-  if(!progressIndex) progressIndex = buildProgressIndex();
-  if(adminProgressDocs===null && !adminProgressLoading && !adminProgressError){ loadAdminProgress(); return; }
-  const head = `<div class="page-head"><div><h2>Student Progress</h2><p>Chapters each student has marked as completed in AI Knowledge Base, Learning Lessons and Audio Explanations.</p></div>
+  const school = isSchoolRole();
+  if(!progressIndex && !school) progressIndex = buildProgressIndex(); // School logins get it from catalog/progressIndex
+  const studentsReady = !school || Array.isArray(entityCache.students);
+  if(studentsReady && adminProgressDocs===null && !adminProgressLoading && !adminProgressError){ loadAdminProgress(); return; }
+  const head = `<div class="page-head"><div><h2>Student Progress</h2><p>${school ? 'Chapters your students have marked as completed' : 'Chapters each student has marked as completed'} in AI Knowledge Base, Learning Lessons and Audio Explanations.</p></div>
     <button class="btn btn-ghost" type="button" id="pgRefreshBtn" title="Loads every student's progress again (about 1 read per student)"><i class="fa-solid fa-rotate"></i> Refresh</button></div>`;
   const wire = ()=>{ const b = document.getElementById('pgRefreshBtn'); if(b) b.onclick = ()=>loadAdminProgress(); };
-  if(adminProgressLoading || !progressIndex){ page.innerHTML = head + `<div class="table-panel">${emptyCatState('fa-spinner fa-spin','Loading…','Getting student progress.')}</div>`; wire(); return; }
+  if(adminProgressLoading || !progressIndex || !studentsReady){ page.innerHTML = head + `<div class="table-panel">${emptyCatState('fa-spinner fa-spin','Loading…','Getting student progress.')}</div>`; wire(); return; }
   if(adminProgressError){ page.innerHTML = head + `<div class="table-panel">${emptyCatState('fa-triangle-exclamation','Could not load progress','Check that your Firestore rules include the progress rules, then press Refresh.')}</div>`; wire(); return; }
 
   const students = entityCache.students || [];
@@ -7303,23 +8105,23 @@ function renderStudentProgressPage(){
   }
   const schools = (entityCache.schools||[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   page.innerHTML = head + `<div class="pg-toolbar">
-      <select class="f-input" id="pgSchoolFilter" aria-label="Filter by school"><option value="">All schools</option>${schools.map(sc=>`<option value="${escapeAttr(sc.id)}" ${adminProgressFilter.school===sc.id?'selected':''}>${escapeHtml(sc.name||'School')}</option>`).join('')}</select>
+      <select class="f-input" id="pgSchoolFilter" aria-label="Filter by school" ${school ? 'hidden' : ''}><option value="">All schools</option>${schools.map(sc=>`<option value="${escapeAttr(sc.id)}" ${adminProgressFilter.school===sc.id?'selected':''}>${escapeHtml(sc.name||'School')}</option>`).join('')}</select>
       <select class="f-input" id="pgRangeFilter" aria-label="Filter by overall progress"><option value="">All progress</option>${PROGRESS_RANGES.map(r=>`<option value="${r.key}" ${adminProgressFilter.range===r.key?'selected':''}>${r.label} completed</option>`).join('')}</select>
       <input class="f-input" id="pgSearch" placeholder="Search student name or email" value="${escapeAttr(adminProgressFilter.q)}" autocomplete="off">
       <span id="pgResultCount" style="align-self:center;font-size:.8rem;color:var(--text-2);"></span>
     </div>
     <div class="table-panel"><div style="overflow-x:auto;"><table id="adminProgressTable">
-      <thead><tr><th>Student</th><th>School</th><th>Overall</th>${PROGRESS_SECTIONS.map(k=>`<th>${PROGRESS_SHORT[k]}</th>`).join('')}<th>Last completed</th></tr></thead>
+      <thead><tr><th>Student</th>${school ? '' : '<th>School</th>'}<th>Overall</th>${PROGRESS_SECTIONS.map(k=>`<th>${PROGRESS_SHORT[k]}</th>`).join('')}<th>Last completed</th></tr></thead>
       <tbody></tbody>
     </table></div></div>`;
   wire();
   const schoolName = new Map(schools.map(sc=>[sc.id, sc.name||'']));
   const fillRows = ()=>{
-    const q = adminProgressFilter.q.trim().toLowerCase();
+    const q = searchNorm(adminProgressFilter.q);
     const range = PROGRESS_RANGES.find(r=>r.key===adminProgressFilter.range);
     const rows = students
       .filter(s=>!adminProgressFilter.school || s.schoolId===adminProgressFilter.school)
-      .filter(s=>!q || (s.name||'').toLowerCase().includes(q) || (s.email||'').toLowerCase().includes(q))
+      .filter(s=>!q || searchHas(s.name, q) || searchHas(s.email, q))
       .map(stu=>({ stu, data: studentProgressData(stu).data }))
       // Students with nothing to track yet count as 0%.
       .filter(({data})=>{ if(!range) return true; const v = pct(data.done, data.total); return v>=range.min && v<=range.max; })
@@ -7327,11 +8129,11 @@ function renderStudentProgressPage(){
     const countEl = page.querySelector('#pgResultCount');
     if(countEl) countEl.textContent = `${rows.length} student${rows.length===1?'':'s'}`;
     const tbody = page.querySelector('#adminProgressTable tbody');
-    if(!rows.length){ tbody.innerHTML = `<tr><td colspan="${4+PROGRESS_SECTIONS.length}">${emptyCatState('fa-user-graduate','No students found','Try a different school, progress range or search.')}</td></tr>`; return; }
+    if(!rows.length){ tbody.innerHTML = `<tr><td colspan="${(school?3:4)+PROGRESS_SECTIONS.length}">${emptyCatState('fa-user-graduate','No students found', school ? 'Try a different progress range or search.' : 'Try a different school, progress range or search.')}</td></tr>`; return; }
     tbody.innerHTML = rows.map(({stu, data})=>{
       return `<tr data-stu="${escapeAttr(stu.id)}" tabindex="0">
         <td><strong>${escapeHtml(stu.name||'Student')}</strong><div style="font-size:.74rem;color:var(--text-2);">${escapeHtml(stu.email||'')}</div></td>
-        <td>${escapeHtml(schoolName.get(stu.schoolId)||'—')}</td>
+        ${school ? '' : `<td>${escapeHtml(schoolName.get(stu.schoolId)||'—')}</td>`}
         <td>${miniBar(data)}</td>
         ${PROGRESS_SECTIONS.map(k=>`<td>${miniBar(data.bySection[k])}</td>`).join('')}
         <td>${data.last ? data.last.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '—'}</td>
